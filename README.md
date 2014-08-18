@@ -1,4 +1,4 @@
 YACalendar
 ==========
 
-Yet Another Calendar - in-game calendar for Wildstar
+Yet Another Calendar - in-game shared calendar for Wildstar
