@@ -23,10 +23,10 @@ L["november"] = true
 L["december"] = true
 
 L["completeDate"] = "$7n, $8n $3n, $1n"
-L["tinyDateTime"] = "$2n/$1n $4n:$5n"
+L["tinyDateTime"] = "$2n/$3n $4n:$5n"
 L["eventDateTime"] = "$7n, $8n $3n, $1n $4n:$5n"
 
-L["duration"] = "Duration: $1n"
+L["duration"] = "Duration: "
 L["Created by:"] = true
 L["Last update:"] = true
 
