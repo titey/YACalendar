@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Addon Author="TiTeY`" APIVersion="9" Name="YACalendar" Description="Shared calendar">
+    <Script Name="YACalendar.lua"/>
+    <Script Name="libs\GeminiLogging-1.2\GeminiLogging.lua"/>
+    <Form Name="YACalendar.xml"/>
+    <Script Name="libs\md5\md5.lua"/>
+    <Script Name="libs\GeminiLocale-1.0\GeminiLocale.lua"/>
+    <Script Name="libs\GeminiLocale-1.0\GeminiLocale.lua"/>
+    <Script Name="locales\frFR.lua"/>
+    <Script Name="locales\enUS.lua"/>
+    <Script Name="libs\GeminiLibDialog-1.0\LibDialog.lua"/>
+</Addon>

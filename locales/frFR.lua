@@ -1,0 +1,58 @@
+local L = Apollo.GetPackage("Gemini:Locale-1.0").tPackage:NewLocale("YACalendar", "frFR")
+if not L then return end
+
+L["monday"] = "lundi"
+L["tuesday"] = "mardi"
+L["wednesday"] = "mercredi"
+L["thursday"] = "jeudi"
+L["friday"] = "vendredi"
+L["saturday"] = "samedi"
+L["sunday"] = "dimanche"
+
+L["january"] = "janvier"
+L["february"] = "février"
+L["march"] = "mars"
+L["april"] = "avril"
+L["may"] = "mai"
+L["june"] = "juin"
+L["july"] = "juillet"
+L["august"] = "août"
+L["september"] = "septembre"
+L["october"] = "octobre"
+L["november"] = "novembre"
+L["december"] = "décembre"
+
+L["completeDate"] = "$7n $3n $8n $1n"
+L["tinyDateTime"] = "$3n/$2n $4nh$5n"
+L["eventDateTime"] = "$7n $3n $8n $1n $4n:$5n"
+
+L["duration"] = "Durée : "
+L["Created by:"] = "Créé par :"
+L["Last update:"] = "Dernière mise à jour :"
+
+L["coming"] = "Présent"
+L["notcoming"] = "Absent"
+L["uncertain"] = "Incertain"
+
+L["addevent"] = "Créer un évenement"
+L["delete"] = "Supprimer"
+
+L["addeventwindowtitle"] = "Créer un nouvel évenement"
+L["eventname"] = "Nom"
+L["eventdate"] = "Date\n\n(année, mois, jour)"
+L["eventhourminute"] = "Heure/minute"
+L["eventduration"] = "Durée"
+L["add"] = "Ajouter"
+L["close"] = "Fermer"
+L["baddate"] = "Il y a une erreur dans la date de l'événement"
+L["mustbeafternow"] = "La date/heure indiquée doit être supérieure à maintenant"
+L["namenotgood"] = "Le nom n'a pas la bonne longueur ou bien contient des caractères incorrects"
+L["dateintegererror"] = "Une erreur s'est glissée dans les champs dates"
+
+L["configuration"] = "Configuration"
+L["titleconfig"] = "Configuration de Yet Another Calendar"
+L["calendarname"] = "Nom du calendrier"
+L["calendarsalt"] = "Clé d'identification"
+L["save"] = "Sauvegarder"
+L["okdeletecalendar"] = "Êtes-vous sûr de vouloir supprimer le calendrier \"$1n\" ?"
+L["badnamesalt"] = "Caractère incorrect dans le nom/id du calendrier, ou vide, ou trop long (max. 30 caractères)"
