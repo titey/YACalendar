@@ -33,6 +33,12 @@ L["Last update:"] = true
 L["coming"] = "Coming"
 L["notcoming"] = "Not coming"
 L["uncertain"] = "Uncertain"
+L["comingcolon"] = "Coming:"
+L["notcomingcolon"] = "Not coming:"
+L["uncertaincolon"] = "Uncertain:"
+L["participant"] = "participant"
+L["participants"] = "participants"
+L["participantsdetail"] = "$1n $2n ($3n, $4n, $5n)"
 
 L["addevent"] = "Add event"
 L["delete"] = "Delete"

@@ -2057,11 +2057,11 @@ function YACalendar:OnDocLoaded()
 		
 		
 		-- do not show any form
-		self.wndMain:Show(false)
-		self.wndCalEv:Show(false)
-		self.wndPartEv:Show(false)
-		self.wndAddEv:Show(false)
-		self.wndConfig:Show(false)
+		self.wndMain:Show(false) -- main window
+		self.wndCalEv:Show(false) -- events list for current day
+		self.wndPartEv:Show(false) -- participants for current event
+		self.wndAddEv:Show(false) -- create a new event
+		self.wndConfig:Show(false) -- config window
 		
 		
 		-- Register handlers for events, slash commands and timer, etc.
@@ -2070,7 +2070,7 @@ function YACalendar:OnDocLoaded()
 		
 		
 		-- timer for message queue management
-		self.timer = ApolloTimer.Create(1.0, true, "OnTimer", self)
+		self.timer = ApolloTimer.Create(0.5, true, "OnTimer", self)
 		
 		
 		-- DEBUG
@@ -2121,9 +2121,9 @@ function YACalendar:OnDocLoaded()
 			self.wndMain:FindChild("Action1Button"):Show(false)
 			self.wndMain:FindChild("TestTimerButton"):Show(false)
 			self.wndMain:FindChild("Act2Button"):Show(false)
-			self.wndMain:FindChild("Title"):SetText("Yet Another Calendar")
+			self.wndMain:FindChild("Title"):SetText("YACalendar")
 		else
-			self.wndMain:FindChild("Title"):SetText("Yet Another Calendar - DEVMODE")
+			self.wndMain:FindChild("Title"):SetText("YACalendar - DEVMODE")
 		end
 		
 		
@@ -3580,17 +3580,31 @@ function YACalendar:OnShowDayCalEvForm(wndHandler, wndControl)
 	local titleText = firstToUpper(self:formatDateTime("completeDate", self.currentDaySelected))
 	
 	wndHandler:FindChild("Title"):SetText(titleText)
-	
+
+	-- move DayCalEv form near main window
 	local oMain1, oMain2, oMain3, oMain4 = self.wndMain:GetAnchorOffsets()
-	
 	self.wndCalEv:SetAnchorOffsets(oMain3-4, oMain2, oMain3+400, oMain2+600)
 	
-	-- disable all winMain DayCal button
-	self:hideAllEventsDayCalEvForm()
+	self:refreshAllEventsDay()
+end
 
+
+
+function YACalendar:refreshAllEventsDay()
+	glog:debug("in refreshAllEventsDay")
+	
+	if self.wndCalEv:IsVisible() == false then
+		glog:debug("wndCalEv is not visible, no need to refresh")
+		return false
+	end
+	
+	-- hide all boxes
+	self:hideAllEventsDayCalEvForm()
+	
+	-- loop on all events for current day and update boxes
 	local eventsDay = getAllEventsDateByCalendarName(self.CONFIG.currentCalendar, self.currentDaySelected.year, self.currentDaySelected.month, self.currentDaySelected.day)
 	if type(eventsDay) ~= "table" then
-		glog:error("OnShowDayCalEvForm: bad type of eventsDay")
+		glog:error("refreshAllEventsDay: bad type of eventsDay")
 		return false
 	end
 	
@@ -3599,8 +3613,6 @@ function YACalendar:OnShowDayCalEvForm(wndHandler, wndControl)
 			self:updateEventDayCalEvForm(i, eventsDay[i])
 		end
 	end
-	
-	
 end
 
 
@@ -3646,8 +3658,52 @@ function YACalendar:updateEventDayCalEvForm(evPos, evData)
 	
 	self.calEventsWindows[evPos]:FindChild("EventTitle"):SetText(evData.eventName)
 	self.calEventsWindows[evPos]:FindChild("ParticipateButton"):SetData(evData.uniqueId)
+	
+	-- reset participant icon
+	self.calEventsWindows[evPos]:FindChild("PlayerStatusIcon"):SetSprite("")
+	
+	-- get participants informations
+	local presentCounter = 0
+	local discardCounter = 0
+	local maybeCounter = 0
+	local playerStatus = "" -- player participate status ?
+	for partKey, partValue in ipairs(evData.participants) do
+	
+		-- test if player is participating to this event
+		if partValue.playerName == GameLib.GetPlayerUnit():GetName() then
+			if partValue.playerStatus == "present" then
+				self.calEventsWindows[evPos]:FindChild("PlayerStatusIcon"):SetSprite("ClientSprites:QuestJewel_Complete_Green")
+			elseif partValue.playerStatus == "maybe" then
+				self.calEventsWindows[evPos]:FindChild("PlayerStatusIcon"):SetSprite("CRB_QuestTrackerSprites:btnQT_QuestLogNormal") -- ClientSprites:QuestJewel_Incomplete_Green
+			else
+				self.calEventsWindows[evPos]:FindChild("PlayerStatusIcon"):SetSprite("ClientSprites:QuestJewel_Decline")
+			end
+		end
+	
+		if partValue.playerStatus == "present" then
+			presentCounter = presentCounter + 1
+		elseif partValue.playerStatus == "discard" then
+			discardCounter = discardCounter + 1
+		else
+			maybeCounter = maybeCounter + 1
+		end
+	end
+	
+	
+	
+	
+	-- update participants detail frame
+	local partStr = L["participant"]
+	if #evData.participants >= 2 then
+		partStr = L["participants"]
+	end
+	local participantsDetailStr = String_GetWeaselString(L["participantsdetail"], tostring(#evData.participants), partStr, L["comingcolon"] .. " " .. tostring(presentCounter), L["notcomingcolon"] .. " " .. tostring(discardCounter), L["uncertaincolon"] .. " " .. tostring(maybeCounter))
+	self.calEventsWindows[evPos]:FindChild("PartDetail"):SetText(participantsDetailStr)
+	
+	-- show the window
 	self.calEventsWindows[evPos]:Show(true)
 	
+	-- vertically align the list
 	evList:ArrangeChildrenVert()
 	
 	return true
@@ -3928,9 +3984,12 @@ function YACalendar:OnClickButtonHerePartEvForm(wndHandler, wndControl, eMouseBu
 	else
 		glog:error("OnClickButtonHerePartEvForm: cant generate updateParticipant message, this is a bug, report it")
 	end
+	
+	
 
 	
 	self:refreshParticipantsList()
+	self:refreshAllEventsDay()
 	
 end
 
