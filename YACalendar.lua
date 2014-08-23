@@ -1130,7 +1130,7 @@ end
 -- @param #string evUpdateDT (optional) event update datetime
 -- @param #boolean evIsDeleted (optional) event is deleted
 -- @param #string evForceUniqueId (optional) force an event uniqueId
--- @return #boolean true on success
+-- @return #string the event unique id, false on error
 local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateDT, evIsDeleted, evForceUniqueId)
 	if calId == nil or evName == nil or evDT == nil or evDur == nil or evCreator == nil then
 		glog:error("addCalendarEvent: params are nil")
@@ -1201,7 +1201,7 @@ local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateD
 							participants =	{}
 						}
 	table.insert(calendarData[calId].events, newEvent)
-	return true
+	return uniqueId
 end
 
 
@@ -1213,7 +1213,7 @@ end
 -- @param #string evDT a SQL datetime
 -- @param #string evDur a duration
 -- @param #string evCreator event creator
--- @return #boolean
+-- @return #string the event unique id
 local function addCalendarEventByCalendarName(calstr, evName, evDT, evDur, evCreator)
 	if calstr == nil or evName == nil or evDT == nil or evDur == nil or evCreator == nil then
 		glog:error("addCalendarEventByCalendarName: params are nil")
@@ -1992,9 +1992,9 @@ end
 -- YACalendar OnLoad
 -- event OnLoad
 function YACalendar:OnLoad()
-	local GeminiLogging = Apollo.GetPackage("Gemini:Logging-1.2").tPackage
 	
 	-- if DEVMODE is activated, push message in GeminiConsole
+	local GeminiLogging = Apollo.GetPackage("Gemini:Logging-1.2").tPackage
 	if DEVMODE == true then
 		glog = GeminiLogging:GetLogger({
 			level = GeminiLogging.DEBUG,
@@ -2023,6 +2023,9 @@ end
 ---
 -- event OnDocLoaded
 function YACalendar:OnDocLoaded()
+
+	
+
 	if self.xmlDoc ~= nil and self.xmlDoc:IsLoaded() then
 		self.wndMain = Apollo.LoadForm(self.xmlDoc, "YACalendarMainForm", nil, self)
 		if self.wndMain == nil then
@@ -3063,6 +3066,7 @@ function YACalendar:loadCurrentCalendarWindow()
 	glog:debug("in loadCurrentCalendarWindow()")
 	
 	
+	
 	-- TODO: close all window
 	
 	-- connect to all cal chan
@@ -3317,6 +3321,23 @@ function YACalendar:loadConfig(t)
 	if t ~= nil and type(t) == "table" then
 		self.CONFIG = deepcopy(t)
 		
+		local GeminiLogging = Apollo.GetPackage("Gemini:Logging-1.2").tPackage -- debug ?
+		if self.CONFIG.DEVMODE == true then
+			DEVMODE = true
+			glog = GeminiLogging:GetLogger({
+				level = GeminiLogging.DEBUG,
+				pattern = "%d %n %c %l - %m",
+				appender = "GeminiConsole"
+			})
+		else
+			DEVMODE = false
+			glog = GeminiLogging:GetLogger({
+				level = GeminiLogging.ERROR,
+				pattern = "%c %l - %m",
+				appender = ""
+			})
+		end
+		
 		if self.CONFIG.compatibility ~= defaults.compatibility then
 			glog:warn("loadConfig: not compatible configuration, reset settings")
 			self:DefaultSettings()
@@ -3391,12 +3412,6 @@ function YACalendar:loadConfig(t)
 	-- if DEVMODE == true then -- DEBUG
 	-- 	calendarData = deepcopy(calDatDEVDATA)
 	-- end
-	
-	if self.CONFIG.DEVMODE == true then
-		DEVMODE = true
-	else
-		DEVMODE = false
-	end
 	
 	self.bRestored = true
 end
@@ -3901,6 +3916,19 @@ function YACalendar:OnClickButtonHerePartEvForm(wndHandler, wndControl, eMouseBu
 		glog:error("OnClickButtonHerePartEvForm: cant add/replace participant")
 		return false
 	end
+	
+	-- TODO: rework this code, put it in a function
+	local cal = getCalendarByName(self.CONFIG.currentCalendar)
+	local channel = generateChannelName(cal.name, cal.salt)
+	local participant = getParticipantByCalendarName(self.CONFIG.currentCalendar, uniqueIdEvent, playername)
+	local messagePart = generateUpdateParticipantTableMessage(channel, self.CONFIG.currentCalendar, uniqueIdEvent, participant)
+	if type(messagePart) == "table" then
+		glog:debug("OnClickButtonHerePartEvForm: add an updateParticipant message in sendSyncData")
+		table.insert(sendSyncData, messagePart)
+	else
+		glog:error("OnClickButtonHerePartEvForm: cant generate updateParticipant message, this is a bug, report it")
+	end
+
 	
 	self:refreshParticipantsList()
 	
@@ -4523,11 +4551,25 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 	
 	local duration = string.format("%02d:%02d", durationhour, durationminute)
 	
-	local result = addCalendarEventByCalendarName(self.CONFIG.currentCalendar, evName:GetText(), dtStr, duration, GameLib:GetPlayerUnit():GetName())
-	if result == false then
+	local evUniqueId = addCalendarEventByCalendarName(self.CONFIG.currentCalendar, evName:GetText(), dtStr, duration, GameLib:GetPlayerUnit():GetName())
+	if evUniqueId == false then
 		glog:error("OnClickAddButtonAddEvForm: cant add event")
 		return false
 	end
+	glog:debug("OnClickAddButtonAddEvForm: event unique id=" .. evUniqueId)
+	
+	-- TODO: rework this code, put it in a function
+	local cal = getCalendarByName(self.CONFIG.currentCalendar)
+	local channel = generateChannelName(cal.name, cal.salt)
+	local ev = getEventUniqueIdByCalendarName(self.CONFIG.currentCalendar ,evUniqueId)
+	local messageEv = generateUpdateEventTableMessage(channel, self.CONFIG.currentCalendar, ev)
+	if type(messageEv) == "table" then
+		glog:debug("OnClickAddButtonAddEvForm: add an updateEvent message in sendSyncData")
+		table.insert(sendSyncData, messageEv)
+	else
+		glog:error("OnClickAddButtonAddEvForm: cant generate updateEvent message, this is a bug, report it")
+	end
+
 	
 	self:loadCurrentCalendarWindow() -- reload the main window
 	
