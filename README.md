@@ -12,3 +12,9 @@ Features
 
 *Note: a guild calendar is automatically created, if you're in a guild.*
 
+Libraries/tools used
+--------------------
+- Gemini:Logging - log4j like, very useful
+- Gemini:LibDialog - pretty dialog boxes
+- Rover - awesome debug tool
+
