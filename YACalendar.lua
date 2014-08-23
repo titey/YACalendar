@@ -5,7 +5,7 @@
 -- Author:  TiTeY`
 -- Copyright (c) TiTeY`
 -----------------------------------------------------------------------------------------------
--- vim: ts=4 sw=4 expandtab
+-- vim: ts=4 sts=4 sw=4 expandtab
 
 require "Apollo"
 require "GameLib"
@@ -3068,8 +3068,6 @@ function YACalendar:loadCurrentCalendarWindow()
 	end
 	
 	
-	-- TODO: close all window
-	
 	-- connect to all cal chan
 	self:connectToChannels()
 	
@@ -4695,6 +4693,12 @@ function YACalendar:OnShowConfigForm(wndHandler, wndControl)
 	glog:debug("in OnShowConfigForm()")
 	
 	self:refreshCalListConfigForm()
+	
+	
+	self.wndCalEv:Show(false)
+	self.wndPartEv:Show(false)
+	self.wndAddEv:Show(false)
+
 	
 end
 
