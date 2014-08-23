@@ -3608,6 +3608,20 @@ function YACalendar:refreshAllEventsDay()
 		return false
 	end
 	
+	
+	-- get all events date and sort it
+	rover:AddWatch("refreshAllEventsDay: eventsDay before", eventsDay)
+	table.sort(eventsDay, 
+		function(a,b)
+			local aEpoch = convertStrDateTimeToEpoch(a.eventDateTime)
+			local bEpoch = convertStrDateTimeToEpoch(b.eventDateTime)
+			return aEpoch < bEpoch
+		end
+	)
+	rover:AddWatch("refreshAllEventsDay: eventsDay after", eventsDay)
+	
+	
+	-- loop on all events and show only not deleted
 	for i=1,#eventsDay do
 		if eventsDay[i].isDeleted == false then
 			self:updateEventDayCalEvForm(i, eventsDay[i])
@@ -3656,7 +3670,9 @@ function YACalendar:updateEventDayCalEvForm(evPos, evData)
 		self.calEventsWindows[evPos] = eventWindow
 	end
 	
-	self.calEventsWindows[evPos]:FindChild("EventTitle"):SetText(evData.eventName)
+	local evDT = parseDateTime(evData.eventDateTime)
+	
+	self.calEventsWindows[evPos]:FindChild("EventTitle"):SetText(string.format("%02d", evDT.hour) .. ":" .. string.format("%02d", evDT.minute) .. " ".. evData.eventName)
 	self.calEventsWindows[evPos]:FindChild("ParticipateButton"):SetData(evData.uniqueId)
 	
 	-- reset participant icon
