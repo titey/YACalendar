@@ -1990,7 +1990,6 @@ end
 
 ---
 -- YACalendar OnLoad
--- event OnLoad
 function YACalendar:OnLoad()
 	
 	-- if DEVMODE is activated, push message in GeminiConsole
@@ -2020,12 +2019,11 @@ function YACalendar:OnLoad()
 	
 end
 
+
+
 ---
 -- event OnDocLoaded
 function YACalendar:OnDocLoaded()
-
-	
-
 	if self.xmlDoc ~= nil and self.xmlDoc:IsLoaded() then
 		self.wndMain = Apollo.LoadForm(self.xmlDoc, "YACalendarMainForm", nil, self)
 		if self.wndMain == nil then
@@ -3065,6 +3063,9 @@ end
 function YACalendar:loadCurrentCalendarWindow()
 	glog:debug("in loadCurrentCalendarWindow()")
 	
+	if DEVMODE == true then
+		rover:AddWatch("loadCurrentCalendarWindow: calendarData", calendarData)
+	end
 	
 	
 	-- TODO: close all window
@@ -3399,6 +3400,7 @@ function YACalendar:loadConfig(t)
 			glog:info("loadConfig: auto add guild calendar")
 			-- TODO: need to get salt in the guild "more info"
 			local salt = getRandomUniqueId("raf")
+			salt = salt:sub(1, 8) -- get 8 chars, it's enough
 			addCalendar(playerGuildName, salt, true)
 		end
 		
