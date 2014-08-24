@@ -75,6 +75,41 @@ local DLG = nil
 
 ---
 -- #table contains all calendars data
+-- data sample
+-- calendarData = { #table all calendars, non-ordered
+-- 	{
+-- 		name = #string the name of calendar, must be unique on all calendars
+-- 		salt = #string the "salt" for the unique channel name generation
+-- 		isGuild = #boolean true if the calendar is a _guild_ calendar
+-- 		events = { #table all calendars, non-ordered
+-- 			{
+-- 				uniqueId = #string a unique id for the event
+-- 				eventName = #string the event name
+-- 				eventDateTime = #string the event date/time in SQL format
+-- 				eventDuration = #string the event duration, format "HH:MM"
+-- 				updateDate = #string the event last update in SQL format
+-- 				eventCreator = #string the event creator (player name)
+-- 				isDeleted = #boolean the event is deleted ?
+-- 				options =	{ #table optionals informations
+-- 					comment = #string (optional) an event comment
+-- 					type = #string (optional) can be "raid" to unlock the raid mode, linked to option "raidRole"
+-- 					raidRole = { #table player role in a raid, dungeon, adventure
+-- 						"tank",
+-- 						"heal",
+-- 						"dps"
+-- 					}
+-- 				}
+-- 				participants = { #table all event participants, non-ordered
+-- 					{
+-- 						playerName = #string participant player name
+-- 						playerDateTime = #string the participant last update in SQL format
+-- 						playerStatus = #string participant status, must be "present", "discard" or "maybe"
+-- 					}
+-- 				}
+-- 			}
+-- 		}
+-- 	}
+-- }
 local calendarData = {}
 
 
