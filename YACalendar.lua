@@ -90,20 +90,23 @@ local DLG = nil
 -- 				updateDate = #string the event last update in SQL format
 -- 				eventCreator = #string the event creator (player name)
 -- 				isDeleted = #boolean the event is deleted ?
--- 				options =	{ #table optionals informations
+-- 				options = { #table optionals informations, but must be a table
 -- 					comment = #string (optional) an event comment
 -- 					type = #string (optional) can be "raid" to unlock the raid mode, linked to option "raidRole"
--- 					raidRole = { #table player role in a raid, dungeon, adventure
--- 						"tank",
--- 						"heal",
--- 						"dps"
--- 					}
+-- 					
 -- 				}
 -- 				participants = { #table all event participants, non-ordered
 -- 					{
 -- 						playerName = #string participant player name
 -- 						playerDateTime = #string the participant last update in SQL format
 -- 						playerStatus = #string participant status, must be "present", "discard" or "maybe"
+-- 						options = { #table optionals informations, but must be a table
+-- 							raidRole = { #table player role in a raid/dungeon/adventure, must contain a value if event type="raid"
+-- 								"tank",
+-- 								"heal",
+-- 								"dps"
+-- 							}
+-- 						}
 -- 					}
 -- 				}
 -- 			}
