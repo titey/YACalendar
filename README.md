@@ -14,7 +14,7 @@ Features
 
 Libraries/tools used
 --------------------
-- Gemini:Logging - log4j like, very useful
-- Gemini:LibDialog - pretty dialog boxes
-- Rover - awesome debug tool
+- [Gemini:Logging](https://github.com/wildstarnasa/GeminiLogging) - log4j like, very useful
+- [Gemini:LibDialog](https://github.com/wildstarnasa/LibDialog) - pretty dialog boxes
+- [Rover](https://github.com/wildstarnasa/Rover) - awesome debug tool
 
