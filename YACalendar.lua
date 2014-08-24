@@ -15,25 +15,19 @@ require "Window"
 
 
 
-local setmetatable, pairs, ipairs, type, unpack = setmetatable, pairs, ipairs, type, unpack
-local tostring, tonumber = tostring, tonumber
-local string, table = string, table
+-- Upvalues
+local type, tostring, tonumber, pairs, ipairs, next, unpack = type, tostring, tonumber, pairs, ipairs, next, unpack
+local setmetatable, getmetatable, xpcall, assert = setmetatable, getmetatable, xpcall, assert
+local ostime, osdate = os.time, os.date
+local tconcat, tinsert, tremove, tsort = table.concat, table.insert, table.remove, table.sort
+local strformat, strlen, strfind, strmatch, strupper, strgfind, strsub, strlower = string.format, string.len, string.find, string.match, string.upper, string.gfind, string.sub, string.lower
 
-
--- TODO: use all these upvalues :
----- Upvalues
---local error, type, tostring, select, pairs = error, type, tostring, select, pairs
---local setmetatable, getmetatable, xpcall = setmetatable, getmetatable, xpcall
---local assert, loadstring, rawset, next, unpack = assert, loadstring, rawset, next, unpack
---local tconcat, tinsert, tremove, ostime = table.concat, table.insert, table.remove, os.time
---local strformat = string.format
 
 
 -----------------------------------------------------------------------------------------------
 -- YACalendar Module Definition
 -----------------------------------------------------------------------------------------------
 local YACalendar = {}
-
 
 
 
@@ -421,7 +415,7 @@ local VERSION = "0.1"
 -- @return #string a string date in SQL format
 local function getDateTimeNow()
 	glog:debug("in getDateTimeNow()")
-	return os.date("%Y-%m-%d %H:%M:%S")
+	return osdate("%Y-%m-%d %H:%M:%S")
 end
 
 
@@ -438,7 +432,7 @@ local function getRandomUniqueId(salt)
 	
 	glog:debug("in getRandomUniqueId(" .. salt .. ")")
 	
-	local seed = os.time()
+	local seed = ostime()
 	glog:debug("seed=" .. seed)
 	math.randomseed(seed)
 	local rnd = math.random()
@@ -471,7 +465,7 @@ local function getDateTimeFrom(yr, mt, d, h, mn, s)
 	
 	glog:debug("in getDateTimeFrom(" .. yr .. ", " .. mt .. ", " .. d .. ", " .. h .. ", " .. mn .. ", " .. s .. ")")
 	
-	return os.date("%Y-%m-%d %H:%M:%S", os.time{year=yr, month=mt, day=d, hour=h, min=mn, sec=s})
+	return osdate("%Y-%m-%d %H:%M:%S", ostime{year=yr, month=mt, day=d, hour=h, min=mn, sec=s})
 end
 
 
@@ -483,11 +477,11 @@ end
 local function testDateTime(strDT)
 	if strDT == nil then
 		return false
-	elseif string.len(strDT) ~= 19 then
+	elseif strlen(strDT) ~= 19 then
 		return false
 	end
 	
-	local osef1, osef2, yr, mt, d, h, mn, s = string.find(strDT, "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+	local osef1, osef2, yr, mt, d, h, mn, s = strfind(strDT, "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
 	if yr == nil or mt == nil or d == nil or h == nil or mn == nil or s == nil then
 		return false
 	elseif tonumber(yr) < 1970 or tonumber(mt) < 1 or tonumber(mt) > 12 or tonumber(d) < 1 or tonumber(d) > 31 or tonumber(h) < 0 or tonumber(h) > 23 or tonumber(mn) < 0 or tonumber(mn) > 59 or tonumber(s) < 0 or tonumber(s) > 61 then
@@ -506,11 +500,11 @@ end
 local function parseDateTime(strDT)
 	if strDT == nil then
 		return false
-	elseif string.len(strDT) ~= 19 then
+	elseif strlen(strDT) ~= 19 then
 		return false
 	end
 	
-	local osef1, osef2, yr, mt, d, h, mn, s = string.find(strDT, "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+	local osef1, osef2, yr, mt, d, h, mn, s = strfind(strDT, "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
 	if yr == nil or mt == nil or d == nil or h == nil or mn == nil or s == nil then
 		return false
 	elseif tonumber(yr) < 1970 or tonumber(mt) < 1 or tonumber(mt) > 12 or tonumber(d) < 1 or tonumber(d) > 31 or tonumber(h) < 0 or tonumber(h) > 23 or tonumber(mn) < 0 or tonumber(mn) > 59 or tonumber(s) < 0 or tonumber(s) > 61 then
@@ -529,14 +523,14 @@ end
 local function testDuration(str)
 	if str == nil then
 		return false
-	elseif string.len(str) == 0 then
+	elseif strlen(str) == 0 then
 		return false
 	end
 	
-	local osef1, osef2, h, mn = string.find(str, "(%d+):(%d+)")
+	local osef1, osef2, h, mn = strfind(str, "(%d+):(%d+)")
 	if h == nil or mn == nil then
 		return false
-	elseif string.len(str) ~= 5 then
+	elseif strlen(str) ~= 5 then
 		return false
 	elseif tonumber(h) < 0 or tonumber(h) > 23 or tonumber(mn) < 0 or tonumber(mn) > 59 then
 		return false
@@ -573,7 +567,7 @@ end
 -- @param #string str a string to uppercase the first char
 -- @return #string a string with first char uppercase
 local function firstToUpper(str)
-    return (str:gsub("^%l", string.upper))
+    return (str:gsub("^%l", strupper))
 end
 
 
@@ -584,7 +578,7 @@ end
 -- @param #number yr an integer year
 -- @return #number an integer of days in month
 local function getDaysInMonth(mnth, yr)
-	return os.date('*t',os.time{year=yr,month=mnth+1,day=0})['day']
+	return osdate('*t',ostime{year=yr,month=mnth+1,day=0})['day']
 end
 
 
@@ -596,7 +590,7 @@ end
 -- @param #number yy the year
 -- @return #number integer
 local function getDayOfWeek(dd, mm, yy)
-	return os.date('*t',os.time{year=yy,month=mm,day=dd})['wday']
+	return osdate('*t',ostime{year=yy,month=mm,day=dd})['wday']
 end
 
 
@@ -638,7 +632,7 @@ local function split(str, pat)
 	elseif type(str) == 0 or type(pat) == 0 then
 		glog:error("split: params are bad type")
 		return false
-	elseif string.len(str) == 0 or string.len(pat) == 0 then
+	elseif strlen(str) == 0 or strlen(pat) == 0 then
 		glog:error("split: params are empty")
 		return false
 	end
@@ -648,14 +642,14 @@ local function split(str, pat)
 	local s, e, cap = str:find(fpat, 1)
 	while s do
 		if s ~= 1 or cap ~= "" then
-			table.insert(t,cap)
+			tinsert(t,cap)
 		end
 		last_end = e+1
 		s, e, cap = str:find(fpat, last_end)
 	end
 	if last_end <= #str then
 		cap = str:sub(last_end)
-		table.insert(t, cap)
+		tinsert(t, cap)
 	end
 	return t
 end
@@ -741,7 +735,7 @@ end
 -- Strip accents from a string
 -- @param #string str
 -- @return #string without accents
-function string.stripAccents(str)
+local function strStripAccents(str)
 	local tA = {}
 	tA["à"] = "a"
 	tA["á"] = "a"
@@ -796,7 +790,7 @@ function string.stripAccents(str)
 	tA["Ý"] = "Y"
 	
 	local normalizedString = ""
-	for strChar in string.gfind(str, "([%z\1-\127\194-\244][\128-\191]*)") do
+	for strChar in strgfind(str, "([%z\1-\127\194-\244][\128-\191]*)") do
 		if tA[strChar] ~= nil then
 			normalizedString = normalizedString..tA[strChar]
 		else
@@ -858,7 +852,7 @@ local function testCalendarName(calname)
 	if calname == nil then
 		glog:error("testCalendarName: no calname in param")
 		return false
-	elseif string.len(calname) == 0 then
+	elseif strlen(calname) == 0 then
 		glog:error("testCalendarName: empty string calname in param")
 		return false
 	end
@@ -906,7 +900,7 @@ local function getCalendarByName(calname)
 	if calname == nil then
 		glog:error("getCalendarByName: no calname in param")
 		return false
-	elseif string.len(calname) == 0 then
+	elseif strlen(calname) == 0 then
 		glog:error("getCalendarByName: empty string calname in param")
 		return false
 	end
@@ -930,7 +924,7 @@ local function getCalendarIdByName(calname)
 	if calname == nil then
 		glog:error("getCalendarIdByName: no calname in param")
 		return false
-	elseif string.len(calname) == 0 then
+	elseif strlen(calname) == 0 then
 		glog:error("getCalendarIdByName: empty string calname in param")
 		return false
 	end
@@ -955,7 +949,7 @@ local function setCalendarName(id, newname)
 	if id == nil or newname == nil then
 		glog:error("setCalendarName: a param is nil")
 		return false
-	elseif id <= 0 or string.len(newname) == 0 then
+	elseif id <= 0 or strlen(newname) == 0 then
 		glog:error("setCalendarName: empty string in param")
 		return false
 	end
@@ -981,7 +975,7 @@ local function setCalendarSalt(id, newsalt)
 	if id == nil or newsalt == nil then
 		glog:error("setCalendarSalt: a param is nil")
 		return false
-	elseif id <= 0 or string.len(newsalt) == 0 then
+	elseif id <= 0 or strlen(newsalt) == 0 then
 		glog:error("setCalendarSalt: empty string in param")
 		return false
 	end
@@ -1008,7 +1002,7 @@ local function addCalendar(calendarName, calendarSalt, calendarGuild)
 	if calendarName == nil or calendarSalt == nil then
 		glog:error("addCalendar: a param is nil")
 		return false
-	elseif string.len(calendarName) == 0 or string.len(calendarSalt) == 0 then
+	elseif strlen(calendarName) == 0 or strlen(calendarSalt) == 0 then
 		glog:error("addCalendar: empty string in param")
 		return false
 	end
@@ -1028,7 +1022,7 @@ local function addCalendar(calendarName, calendarSalt, calendarGuild)
 		isGuild = calendarGuild,
 		events = {}
 	}
-	table.insert(calendarData, newCal)
+	tinsert(calendarData, newCal)
 	return true
 end
 
@@ -1053,7 +1047,7 @@ local function deleteCalendar(id)
 		glog:error("no calendar with id " .. id)
 		return false
 	end
-	table.remove(calendarData, id)
+	tremove(calendarData, id)
 	return true
 end
 
@@ -1081,7 +1075,7 @@ local function testEvent(ev, dontTestAllData)
 	elseif type(ev.eventName) ~= "string" or type(ev.eventCreator) ~= "string" or type(ev.eventDateTime) ~= "string" or type(ev.eventDuration) ~= "string" or type(ev.updateDate) ~= "string" or type(ev.isDeleted) ~= "boolean" then
 		glog:debug("testEvent: params are not good type")
 		return false
-	elseif string.len(ev.eventName) == 0 or string.len(ev.eventCreator) == 0 or testDateTime(ev.eventDateTime) == false or testDuration(ev.eventDuration) == false or testDateTime(ev.updateDate) == false or inTable({true, false}, ev.isDeleted) == false then
+	elseif strlen(ev.eventName) == 0 or strlen(ev.eventCreator) == 0 or testDateTime(ev.eventDateTime) == false or testDuration(ev.eventDuration) == false or testDateTime(ev.updateDate) == false or inTable({true, false}, ev.isDeleted) == false then
 		glog:debug("testEvent: param does not contain a valid data")
 		return false
 	end
@@ -1093,7 +1087,7 @@ local function testEvent(ev, dontTestAllData)
 		elseif type(ev.participants) ~= "table" or type(ev.uniqueId) ~= "string" then
 			glog:debug("testEvent: participants or uniqueId are not in good type")
 			return false
-		elseif string.len(ev.uniqueId) == 0 then -- participants can be an empty table
+		elseif strlen(ev.uniqueId) == 0 then -- participants can be an empty table
 			glog:debug("testEvent: uniqueId is empty")
 			return false
 		end
@@ -1121,7 +1115,7 @@ local function testParticipant(part)
 	elseif type(part.playerName) ~= "string" or type(part.playerDateTime) ~= "string" or type(part.playerStatus) ~= "string" then
 		glog:debug("testParticipant: params are not good type")
 		return false
-	elseif string.len(part.playerName) == 0 or testDateTime(part.playerDateTime) == false or inTable({"present", "maybe", "discard"}, part.playerStatus) == false then
+	elseif strlen(part.playerName) == 0 or testDateTime(part.playerDateTime) == false or inTable({"present", "maybe", "discard"}, part.playerStatus) == false then
 		glog:debug("testParticipant: param does not contain a valid data")
 		return false
 	end
@@ -1148,7 +1142,7 @@ local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateD
 	elseif type(calId) ~= "number" or type(evName) ~= "string" or type(evDT) ~= "string" or type(evDur) ~= "string" or type(evCreator) ~= "string" then
 		glog:error("addCalendarEvent: bad params type")
 		return false
-	elseif calId <= 0 or string.len(evName) == 0 or string.len(evDT) == 0 or string.len(evDur) == 0 or string.len(evCreator) == 0 then
+	elseif calId <= 0 or strlen(evName) == 0 or strlen(evDT) == 0 or strlen(evDur) == 0 or strlen(evCreator) == 0 then
 		glog:error("addCalendarEvent: params are not in correct bounds")
 		return false
 	elseif testCalendarId(calId) == false then
@@ -1182,7 +1176,7 @@ local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateD
 		if type(evForceUniqueId) ~= "string" then
 			glog:error("addCalendarEvent: evForceUniqueId is not a string")
 			return false
-		elseif string.len(evForceUniqueId) == 0 then
+		elseif strlen(evForceUniqueId) == 0 then
 			glog:error("addCalendarEvent: evForceUniqueId is empty")
 			return false
 		end
@@ -1210,7 +1204,7 @@ local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateD
 							eventCreator = evCreator,
 							participants =	{}
 						}
-	table.insert(calendarData[calId].events, newEvent)
+	tinsert(calendarData[calId].events, newEvent)
 	return uniqueId
 end
 
@@ -1231,7 +1225,7 @@ local function addCalendarEventByCalendarName(calstr, evName, evDT, evDur, evCre
 	elseif type(calstr) ~= "string" or type(evName) ~= "string" or type(evDT) ~= "string" or type(evDur) ~= "string" or type(evCreator) ~= "string" then
 		glog:error("addCalendarEventByCalendarName: bad params type")
 		return false
-	elseif string.len(calstr) == 0 or string.len(evName) == 0 or string.len(evDT) == 0 or string.len(evDur) == 0 or string.len(evCreator) == 0 then
+	elseif strlen(calstr) == 0 or strlen(evName) == 0 or strlen(evDT) == 0 or strlen(evDur) == 0 or strlen(evCreator) == 0 then
 		glog:error("addCalendarEventByCalendarName: params are not in correct bounds")
 		return false
 	end
@@ -1304,11 +1298,11 @@ local function getAllEventsDate(calId, year, month, day)
 	
 	-- loop on all events
 	for key,ev in pairs(events) do
-		local evDate = string.sub(ev.eventDateTime, 1, 10)
+		local evDate = strsub(ev.eventDateTime, 1, 10)
 		
 		-- catch all event for day wanted
 		if evDate == dtStr then
-			table.insert(returnData, deepcopy(ev))
+			tinsert(returnData, deepcopy(ev))
 		end
 	end
 	
@@ -1389,7 +1383,7 @@ local function addReplaceEvent(calid, uniqueid, event)
 	elseif type(calid) ~= "number" or type(uniqueid) ~= "string" or type(event) ~= "table" then
 		glog:error("addReplaceEvent: bad params type")
 		return false
-	elseif testCalendarId(calid) == false or string.len(uniqueid) == 0 or testEvent(event, true) == false then
+	elseif testCalendarId(calid) == false or strlen(uniqueid) == 0 or testEvent(event, true) == false then
 		glog:error("addReplaceEvent: bad params content")
 		return false
 	end
@@ -1455,7 +1449,7 @@ local function addReplaceParticipant(calid, uniqueid, playername, status, dt)
 	elseif type(calid) ~= "number" or type(uniqueid) ~= "string" or type(playername) ~= "string" or type(status) ~= "string" then
 		glog:error("AddReplaceParticipant: bad params type")
 		return false
-	elseif testCalendarId(calid) == false or string.len(uniqueid) == 0 or string.len(playername) == 0 then
+	elseif testCalendarId(calid) == false or strlen(uniqueid) == 0 or strlen(playername) == 0 then
 		glog:error("AddReplaceParticipant: bad params content")
 		return false
 	elseif inTable({"present", "maybe", "discard"}, status) == false then
@@ -1489,7 +1483,7 @@ local function addReplaceParticipant(calid, uniqueid, playername, status, dt)
 			end
 			
 			-- ok, not found, add a participant entry
-			table.insert(calendarData[calid].events[evKey].participants, {playerName = playername, playerStatus = status, playerDateTime = playerDateTime})
+			tinsert(calendarData[calid].events[evKey].participants, {playerName = playername, playerStatus = status, playerDateTime = playerDateTime})
 			glog:debug("AddReplaceParticipant: not found the participant entry (" .. playername .. "), add it")
 			return true
 		end
@@ -1540,7 +1534,7 @@ local function getParticipant(calid, uniqueid, playername)
 	elseif type(calid) ~= "number" or type(uniqueid) ~= "string" or type(playername) ~= "string" then
 		glog:error("getParticipant: bad params type")
 		return false
-	elseif testCalendarId(calid) == false or string.len(uniqueid) == 0 or string.len(playername) == 0 then
+	elseif testCalendarId(calid) == false or strlen(uniqueid) == 0 or strlen(playername) == 0 then
 		glog:error("getParticipant: bad params content")
 		return false
 	end
@@ -1611,7 +1605,7 @@ local function testParticipantNameStatus(calid, uniqueid, playername, status)
 	elseif type(calid) ~= "number" or type(uniqueid) ~= "string" or type(playername) ~= "string" or type(status) ~= "string" then
 		glog:error("testParticipantNameStatus: bad params type")
 		return false
-	elseif testCalendarId(calid) == false or string.len(uniqueid) == 0 or string.len(playername) == 0 then
+	elseif testCalendarId(calid) == false or strlen(uniqueid) == 0 or strlen(playername) == 0 then
 		glog:error("testParticipantNameStatus: bad params content")
 		return false
 	elseif inTable({"present", "maybe", "discard"}, status) == false then
@@ -1740,13 +1734,13 @@ local function convertStrDateTimeToEpoch(strdt)
 		return false
 	end
 	
-	local runyear, runmonth, runday, runhour, runminute, runseconds = string.match(strdt, "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+	local runyear, runmonth, runday, runhour, runminute, runseconds = strmatch(strdt, "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
 	if runyear == nil or runmonth == nil or runday == nil or runhour == nil or runminute == nil or runseconds == nil then
 		glog:error("convertStrDateTimeToEpoch: cant parse datetime")
 		return false
 	end
 	
-	return os.time({year = runyear, month = runmonth, day = runday, hour = runhour, min = runminute, sec = runseconds})
+	return ostime({year = runyear, month = runmonth, day = runday, hour = runhour, min = runminute, sec = runseconds})
 end
 
 
@@ -1813,9 +1807,9 @@ local function serializeMessage(dataTable)
 		elseif dValue == false then
 			dValue = "false"
 		end
-		table.insert(prejoin, dKey .. "=" .. dValue)
+		tinsert(prejoin, dKey .. "=" .. dValue)
 	end
-	local ret = dataTable.calendarname .. "," .. dataTable.command .. "," .. dataTable.eventuid .. "," .. table.concat(prejoin, "|")
+	local ret = dataTable.calendarname .. "," .. dataTable.command .. "," .. dataTable.eventuid .. "," .. tconcat(prejoin, "|")
 	-- glog:debug("serializeMessage: return " .. ret)
 	return ret
 end
@@ -1835,18 +1829,18 @@ local function unserializeMessage(serializedDataString)
 		return false
 	end
 	
-	local calendarnameStr, commandStr, eventuidStr, dataStr = string.match(serializedDataString, "([^,]+),([^,]+),([^,]+),([^,]*)")
+	local calendarnameStr, commandStr, eventuidStr, dataStr = strmatch(serializedDataString, "([^,]+),([^,]+),([^,]+),([^,]*)")
 	if calendarnameStr == nil or commandStr == nil or eventuidStr == nil or dataStr == nil then
 		glog:error("unserializeMessage: parsed string are nil")
 		return false
-	elseif string.len(calendarnameStr) == 0 or string.len(commandStr) == 0 or string.len(eventuidStr) == 0 then
+	elseif strlen(calendarnameStr) == 0 or strlen(commandStr) == 0 or strlen(eventuidStr) == 0 then
 		glog:error("unserializeMessage: parsed string are empty")
 		return false
 	end
 	
 	local data = {}
 	
-	if string.len(dataStr) > 0 then
+	if strlen(dataStr) > 0 then
 		local postsplit = split(dataStr, "|")
 		if (type(postsplit) ~= "table") then
 			glog:error("unserializeMessage: cant split string")
@@ -1861,7 +1855,7 @@ local function unserializeMessage(serializedDataString)
 			if spl[1] == nil or spl[2] == nil then
 				glog:error("unserializeMessage: cant parse data part in " .. serializedDataString)
 				return false
-			elseif string.len(spl[1]) == 0 or string.len(spl[2]) == 0 then
+			elseif strlen(spl[1]) == 0 or strlen(spl[2]) == 0 then
 				glog:error("unserializeMessage: empty data part in " .. serializedDataString)
 				return false
 			end
@@ -1901,7 +1895,7 @@ local function generateUpdateEventTableMessage(channel, calendarname, event)
 	elseif type(channel) ~= "string" or type(calendarname) ~= "string" or type(event) ~= "table" then
 		glog:error("generateUpdateEventTableMessage: bad params type")
 		return false
-	elseif string.len(channel) == 0 or string.len(calendarname) == 0 or testEvent(event, true) == false then
+	elseif strlen(channel) == 0 or strlen(calendarname) == 0 or testEvent(event, true) == false then
 		glog:error("generateUpdateEventTableMessage: empty data")
 		return false
 	elseif (event.uniqueId) == nil then
@@ -1910,7 +1904,7 @@ local function generateUpdateEventTableMessage(channel, calendarname, event)
 	elseif type(event.uniqueId) ~= "string" then
 		glog:error("generateUpdateEventTableMessage: uniqueId type is not string")
 		return false
-	elseif string.len(event.uniqueId) == 0 then
+	elseif strlen(event.uniqueId) == 0 then
 		glog:error("generateUpdateEventTableMessage: empty uniqueId")
 		return false
 	end
@@ -1940,7 +1934,7 @@ local function generateUpdateParticipantTableMessage(channel, calendarname, even
 	elseif type(channel) ~= "string" or type(calendarname) ~= "string" or type(eventUniqueId) ~= "string" or type(participant) ~= "table" then
 		glog:error("generateUpdateParticipantTableMessage: bad params type")
 		return false
-	elseif string.len(channel) == 0 or string.len(calendarname) == 0 or string.len(eventUniqueId) == 0 or testParticipant(participant) == false then
+	elseif strlen(channel) == 0 or strlen(calendarname) == 0 or strlen(eventUniqueId) == 0 or testParticipant(participant) == false then
 		glog:error("generateUpdateParticipantTableMessage: empty data")
 		return false
 	end
@@ -2118,10 +2112,10 @@ function YACalendar:OnDocLoaded()
 		
 		
 		if self.currentYearShown == nil then
-			self.currentYearShown = tonumber(os.date("%Y"))
+			self.currentYearShown = tonumber(osdate("%Y"))
 		end
 		if self.currentMonthShown == nil then
-			self.currentMonthShown = tonumber(os.date("%m"))
+			self.currentMonthShown = tonumber(osdate("%m"))
 		end
 		
 		
@@ -2169,7 +2163,7 @@ function YACalendar:OnDocLoaded()
 				},
 			},
 			OnShow = function(settings, data)
-				if data.text ~= nil and string.len(data.text) > 0 then
+				if data.text ~= nil and strlen(data.text) > 0 then
 					settings:SetText(data.text)
 				end
 			end,
@@ -2207,7 +2201,7 @@ function YACalendar:OnTimer()
 	
 	
 	-- get a data to send into a channel
-	local sendData = table.remove(sendSyncData, 1)
+	local sendData = tremove(sendSyncData, 1)
 	
 	if sendData ~= nil then -- data to send ?
 		if channels[sendData.channel] ~= nil then
@@ -2219,7 +2213,7 @@ function YACalendar:OnTimer()
 					glog:info("OnTimer: message \"" .. msg .. "\" sent")
 				else
 					glog:warn("OnTimer: channel not ready, add message at the end")
-					table.insert(sendSyncData, sendData)
+					tinsert(sendSyncData, sendData)
 				end
 			else
 				glog:error("OnTimer: cant serialize message")
@@ -2255,7 +2249,7 @@ function YACalendar:OnTimer()
 						local messageEv = generateUpdateEventTableMessage(valueRSD.channel, valueRSD.calendarname, valueEv)
 						if type(messageEv) == "table" then
 							glog:debug("OnTimer: add an updateEvent message in sendSyncData")
-							table.insert(sendSyncData, messageEv)
+							tinsert(sendSyncData, messageEv)
 						else
 							glog:error("OnTimer: cant generate updateEvent message, this is a bug, report it")
 						end
@@ -2265,7 +2259,7 @@ function YACalendar:OnTimer()
 							local messagePart = generateUpdateParticipantTableMessage(valueRSD.channel, valueRSD.calendarname, valueEv.uniqueId, valuePart)
 							if type(messagePart) == "table" then
 								glog:debug("OnTimer: add an updateParticipant message in sendSyncData")
-								table.insert(sendSyncData, messagePart)
+								tinsert(sendSyncData, messagePart)
 							else
 								glog:error("OnTimer: cant generate updateParticipant message, this is a bug, report it")
 							end
@@ -2361,7 +2355,7 @@ function YACalendar:formatDateTime(strFormat, tDT)
 	elseif type(strFormat) ~= "string" or type(tDT) ~= "table" then
 		glog:error("formatDateTime: params are bad type")
 		return false
-	elseif string.len(strFormat) == 0 then
+	elseif strlen(strFormat) == 0 then
 		glog:error("formatDateTime: params are not ok")
 		return false
 	elseif tDT.year < 1970 or tDT.month < 1 or tDT.month > 12 or tDT.day < 1 or tDT.day > 31 then
@@ -2464,7 +2458,7 @@ function YACalendar:getUpdateAllCalendar()
 						eventuid		= "osef",
 						data			= {}
 					}
-		table.insert(sendSyncData, d)
+		tinsert(sendSyncData, d)
 	end
 end
 
@@ -2484,7 +2478,7 @@ function YACalendar:OnClickACT2Button(wndHandler, wndControl, eMouseButton)
 					data			= {}
 				}
 	
-	table.insert(sendSyncData, d)
+	tinsert(sendSyncData, d)
 	
 	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickACT2Button: sendSyncData", sendSyncData) end
 	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickACT2Button: receivedSyncData", receivedSyncData) end
@@ -2909,7 +2903,7 @@ end
 ---
 -- for debug
 function YACalendar:OnMyMsg(strCommand, strArg)
-	glog:info(string.format("[MyChannel] Sending: %s", strArg))
+	glog:info(strformat("[MyChannel] Sending: %s", strArg))
 	self.channel:SendMessage({strDeliver = strArg})
 end
 
@@ -2925,7 +2919,7 @@ function YACalendar:connectToChannels()
 	local goodChannels = {}
 	for calId,calValue in pairs(calendarData) do
 		local channelName = generateChannelName(calValue.name, calValue.salt)
-		table.insert(goodChannels, channelName)
+		tinsert(goodChannels, channelName)
 		if channels[channelName] == nil then
 		
 			-- set a named wrapper for msgReceived()
@@ -2965,7 +2959,7 @@ function YACalendar.msgReceived(channel, tMsg, strSender, channelStr)
 	elseif type(channel) ~= "userdata" or type(tMsg) ~= "table" or type(strSender) ~= "string" or type(channelStr) ~= "string" then
 		glog:debug("msgReceived: bad type params")
 		return false
-	elseif string.len(strSender) == 0 or string.len(channelStr) == 0 then
+	elseif strlen(strSender) == 0 or strlen(channelStr) == 0 then
 		glog:debug("msgReceived: channelStr is empty")
 		return false
 	elseif tMsg.strDeliver == nil then
@@ -2974,12 +2968,12 @@ function YACalendar.msgReceived(channel, tMsg, strSender, channelStr)
 	elseif type(tMsg.strDeliver) ~= "string" then
 		glog:debug("msgReceived: message is not a string")
 		return false
-	elseif string.len(tMsg.strDeliver) == 0 then
+	elseif strlen(tMsg.strDeliver) == 0 then
 		glog:debug("msgReceived: message is an empty string")
 		return false
 	end
 	
-	glog:debug(string.format("msgReceived: Received message: %s", tMsg.strDeliver))
+	glog:debug(strformat("msgReceived: Received message: %s", tMsg.strDeliver))
 	
 	local d = unserializeMessage(deepcopy(tMsg.strDeliver))
 	if type(d) ~= "table" then
@@ -3013,7 +3007,7 @@ function YACalendar.msgReceived(channel, tMsg, strSender, channelStr)
 	-- end
 	
 	-- check event uniq id
-	if string.len(d.eventuid) == 0 then
+	if strlen(d.eventuid) == 0 then
 		glog:error("msgReceived: eventuid is empty")
 		return false
 	end
@@ -3052,7 +3046,7 @@ function YACalendar.msgReceived(channel, tMsg, strSender, channelStr)
 	d.channel = channelStr
 	
 	-- add data to received queue
-	table.insert(receivedSyncData, d)
+	tinsert(receivedSyncData, d)
 	
 end
 
@@ -3079,7 +3073,7 @@ function YACalendar:loadCurrentCalendarWindow()
 	
 	
 	-- test if current calendar is ok
-	if self.CONFIG.currentCalendar == nil or string.len(self.CONFIG.currentCalendar) == 0 or testCalendarName(self.CONFIG.currentCalendar) == false then
+	if self.CONFIG.currentCalendar == nil or strlen(self.CONFIG.currentCalendar) == 0 or testCalendarName(self.CONFIG.currentCalendar) == false then
 		if calendarData ~= nil and #calendarData >= 1 then
 			self.CONFIG.currentCalendar = calendarData[1].name
 			glog:debug("loadCurrentCalendarWindow: set currentCalendar to \"" .. self.CONFIG.currentCalendar .. "\"")
@@ -3159,7 +3153,7 @@ function YACalendar:resetDayCalCells()
 	if self.currentMonthShown <= 9 then
 		currentMonthShownStrNumber = "0" .. tostring(self.currentMonthShown)
 	end
-	local currentMonthShownStr = string.lower(os.date("%B", os.time{year=self.currentYearShown, month=self.currentMonthShown, day=1}))
+	local currentMonthShownStr = strlower(osdate("%B", ostime{year=self.currentYearShown, month=self.currentMonthShown, day=1}))
 	
 	
 	-- show current year-month text
@@ -3388,7 +3382,7 @@ function YACalendar:loadConfig(t)
 		-- delete all guild calendar if player is not guilded
 		for key,cal in pairs(calendarData) do
 			if cal.isGuild == true then
-				if string.len(playerGuildName) > 0 and cal.name == playerGuildName then
+				if strlen(playerGuildName) > 0 and cal.name == playerGuildName then
 					foundGuildCalendar = true
 					glog:debug("loadConfig: found guild calendar \"" .. cal.name .. "\", id=" .. tostring(key))
 				else
@@ -3400,7 +3394,7 @@ function YACalendar:loadConfig(t)
 		
 		
 		-- add guild calendar if not found
-		if string.len(playerGuildName) > 0 and foundGuildCalendar == false then
+		if strlen(playerGuildName) > 0 and foundGuildCalendar == false then
 			glog:info("loadConfig: auto add guild calendar")
 			-- TODO: need to get salt in the guild "more info"
 			local salt = getRandomUniqueId("raf")
@@ -3450,7 +3444,7 @@ end
 function YACalendar:OnClickDayCal(wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation)
 	-- Print("Click on " .. wndHandler:GetName())
 	
-	local osef1, osef2, dayCalId = string.find(wndHandler:GetName(), "^DayCal(%d+)$")
+	local osef1, osef2, dayCalId = strfind(wndHandler:GetName(), "^DayCal(%d+)$")
 	if dayCalId == nil then
 		glog:error("OnClickDayCal: cant match DayCal cell id")
 		return false
@@ -3502,9 +3496,9 @@ function YACalendar:OnClickCalendarBackNextButtonMainForm(wndHandler, wndControl
 	
 	local way = ""
 	
-	if string.find(wndControl:GetName(), "Back") ~= nil then
+	if strfind(wndControl:GetName(), "Back") ~= nil then
 		way = "back"
-	elseif string.find(wndControl:GetName(), "Next") ~= nil then
+	elseif strfind(wndControl:GetName(), "Next") ~= nil then
 		way = "next"
 	else
 		glog:error("OnClickCalendarBackNextButtonMainForm: cant get way")
@@ -3570,7 +3564,7 @@ function YACalendar:OnShowDayCalEvForm(wndHandler, wndControl)
 	elseif type(self.CONFIG.currentCalendar) ~= "string" then
 		glog:error("OnShowDayCalEvForm: currentCalendar is not a string")
 		return false
-	elseif string.len(self.CONFIG.currentCalendar) == 0 then
+	elseif strlen(self.CONFIG.currentCalendar) == 0 then
 		glog:error("OnShowDayCalEvForm: currentCalendar is an empty string")
 		return false
 	end
@@ -3617,7 +3611,7 @@ function YACalendar:refreshAllEventsDay()
 	
 	-- get all events date and sort it
 	if DEVMODE == true and rover ~= nil then rover:AddWatch("refreshAllEventsDay: eventsDay before", eventsDay) end
-	table.sort(eventsDay, 
+	tsort(eventsDay, 
 		function(a,b)
 			local aEpoch = convertStrDateTimeToEpoch(a.eventDateTime)
 			local bEpoch = convertStrDateTimeToEpoch(b.eventDateTime)
@@ -3678,7 +3672,7 @@ function YACalendar:updateEventDayCalEvForm(evPos, evData)
 	
 	local evDT = parseDateTime(evData.eventDateTime)
 	
-	self.calEventsWindows[evPos]:FindChild("EventTitle"):SetText(string.format("%02d", evDT.hour) .. ":" .. string.format("%02d", evDT.minute) .. " ".. evData.eventName)
+	self.calEventsWindows[evPos]:FindChild("EventTitle"):SetText(strformat("%02d", evDT.hour) .. ":" .. strformat("%02d", evDT.minute) .. " - ".. evData.eventName)
 	self.calEventsWindows[evPos]:FindChild("ParticipateButton"):SetData(evData.uniqueId)
 	
 	-- reset participant icon
@@ -3814,7 +3808,7 @@ function YACalendar:OnShowPartEvForm(wndHandler, wndControl)
 		return false
 	end
 
-	if string.len(wndControl:GetData()) == 0 then
+	if strlen(wndControl:GetData()) == 0 then
 		glog:error("OnShowPartEvForm: no uniqueId, bug?")
 		return false
 	end
@@ -3900,7 +3894,7 @@ function YACalendar:refreshParticipantsList()
 		children[i]:Destroy()
 	end
 	
-	table.sort(participants, function(a,b) return a.playerName<b.playerName end) -- sort participants
+	tsort(participants, function(a,b) return a.playerName<b.playerName end) -- sort participants
 	
 	for id,playerInfo in pairs(participants) do
 
@@ -3972,7 +3966,7 @@ function YACalendar:OnClickButtonHerePartEvForm(wndHandler, wndControl, eMouseBu
 	local playername = GameLib:GetPlayerUnit():GetName()
 	
 	
-	if string.len(self.CONFIG.currentCalendar) == 0 then
+	if strlen(self.CONFIG.currentCalendar) == 0 then
 		glog:error("OnClickButtonHerePartEvForm: no current calendar, this is a bug, report it")
 		return false
 	end
@@ -4002,7 +3996,7 @@ function YACalendar:OnClickButtonHerePartEvForm(wndHandler, wndControl, eMouseBu
 	local messagePart = generateUpdateParticipantTableMessage(channel, self.CONFIG.currentCalendar, uniqueIdEvent, participant)
 	if type(messagePart) == "table" then
 		glog:debug("OnClickButtonHerePartEvForm: add an updateParticipant message in sendSyncData")
-		table.insert(sendSyncData, messagePart)
+		tinsert(sendSyncData, messagePart)
 	else
 		glog:error("OnClickButtonHerePartEvForm: cant generate updateParticipant message, this is a bug, report it")
 	end
@@ -4110,7 +4104,7 @@ function YACalendar:OnShowAddEvForm(wndHandler, wndControl)
 	end
 	
 	
-	local useDate = os.date('*t')
+	local useDate = osdate('*t')
 	if type(self.currentDaySelected) == "table" then
 		glog:debug("OnShowAddEvForm: use currentDaySelected")
 		useDate = deepcopy(self.currentDaySelected)
@@ -4126,16 +4120,16 @@ function YACalendar:OnShowAddEvForm(wndHandler, wndControl)
 	-- using current time ?
 	if useDate.hour == nil or useDate.minute == nil or useDate.hour == 0 or useDate.minute == 0 then
 		glog:debug("OnShowAddEvForm: get current hour/min")
-		useDate.hour = os.date('*t')["hour"]
-		useDate.minute = os.date('*t')["min"]
+		useDate.hour = osdate('*t')["hour"]
+		useDate.minute = osdate('*t')["min"]
 	end
 	
 	-- push date+duration in EditBox
 	evDateYear:SetText(tostring(useDate.year))
-	evDateMonth:SetText(string.format("%02d", useDate.month))
-	evDateDay:SetText(string.format("%02d", useDate.day))
-	evDateHour:SetText(string.format("%02d", useDate.hour))
-	evDateMinute:SetText(string.format("%02d", useDate.minute))
+	evDateMonth:SetText(strformat("%02d", useDate.month))
+	evDateDay:SetText(strformat("%02d", useDate.day))
+	evDateHour:SetText(strformat("%02d", useDate.hour))
+	evDateMinute:SetText(strformat("%02d", useDate.minute))
 	
 	
 	-- init old content of all EditBox
@@ -4161,7 +4155,7 @@ end
 function YACalendar:OnClickButtonAddEvForm(wndHandler, wndControl, eMouseButton)
 	local ctrlName = wndControl:GetName()
 	
-	if string.find(ctrlName, "Button") == nil then
+	if strfind(ctrlName, "Button") == nil then
 		glog:error("OnClickButtonAddEvForm: you're not a button, you are not suppose to be here")
 		return false
 	end
@@ -4173,9 +4167,9 @@ function YACalendar:OnClickButtonAddEvForm(wndHandler, wndControl, eMouseButton)
 	local part = ""
 	
 	-- increment (down), decrement (up)
-	if string.find(ctrlName, "Up") ~= nil then
+	if strfind(ctrlName, "Up") ~= nil then
 		direction = "up"
-	elseif string.find(ctrlName, "Down") ~= nil then
+	elseif strfind(ctrlName, "Down") ~= nil then
 		direction = "down"
 	else
 		glog:error("OnClickButtonAddEvForm: cant match direction")
@@ -4183,28 +4177,28 @@ function YACalendar:OnClickButtonAddEvForm(wndHandler, wndControl, eMouseButton)
 	end
 	
 	-- date or duration
-	if string.find(ctrlName, "Date") ~= nil then
+	if strfind(ctrlName, "Date") ~= nil then
 		target = "date"
-	elseif string.find(ctrlName, "Duration") ~= nil then
+	elseif strfind(ctrlName, "Duration") ~= nil then
 		target = "duration"
 	else
 		glog:error("OnClickButtonAddEvForm: cant match target")
 		return false
 	end
 	
-	if string.find(ctrlName, "Year") ~= nil then
+	if strfind(ctrlName, "Year") ~= nil then
 		part = "year"
-	elseif string.find(ctrlName, "Month") ~= nil then
+	elseif strfind(ctrlName, "Month") ~= nil then
 		part = "month"
-	elseif string.find(ctrlName, "Day") ~= nil then
+	elseif strfind(ctrlName, "Day") ~= nil then
 		part = "day"
-	elseif string.find(ctrlName, "DateHour") ~= nil then
+	elseif strfind(ctrlName, "DateHour") ~= nil then
 		part = "hour"
-	elseif string.find(ctrlName, "DateMinute") ~= nil then
+	elseif strfind(ctrlName, "DateMinute") ~= nil then
 		part = "minute"
-	elseif string.find(ctrlName, "DurationHour") ~= nil then
+	elseif strfind(ctrlName, "DurationHour") ~= nil then
 		part = "durationhour"
-	elseif string.find(ctrlName, "DurationMinute") ~= nil then
+	elseif strfind(ctrlName, "DurationMinute") ~= nil then
 		part = "durationminute"
 	else
 		glog:error("OnClickButtonAddEvForm: cant match part")
@@ -4360,12 +4354,12 @@ function YACalendar:OnClickButtonAddEvForm(wndHandler, wndControl, eMouseButton)
 	
 	-- show new values in EditBox
 	evDateYear:SetText(tostring(year))
-	evDateMonth:SetText(string.format("%02d", month))
-	evDateDay:SetText(string.format("%02d", day))
-	evDateHour:SetText(string.format("%02d", hour))
-	evDateMinute:SetText(string.format("%02d", minute))
-	evDurationHour:SetText(string.format("%02d", durationhour))
-	evDurationMinute:SetText(string.format("%02d", durationminute))
+	evDateMonth:SetText(strformat("%02d", month))
+	evDateDay:SetText(strformat("%02d", day))
+	evDateHour:SetText(strformat("%02d", hour))
+	evDateMinute:SetText(strformat("%02d", minute))
+	evDurationHour:SetText(strformat("%02d", durationhour))
+	evDurationMinute:SetText(strformat("%02d", durationminute))
 	
 	-- set week day
 	self:refreshWeekdayAddEvForm()
@@ -4384,9 +4378,9 @@ function YACalendar:OnEditBoxChangedAddEvForm(wndHandler, wndControl, strNewText
 	if wndControl:GetName() == "EventNameTextBox" then
 		-- check alphanumeric string
 	
-		local cleanNewText = string.stripAccents(strNewText)
-		local testStr = string.match(cleanNewText, "^[a-zA-Z0-9 :,?!_-]+$")
-		if string.len(cleanNewText) > 30 then
+		local cleanNewText = strStripAccents(strNewText)
+		local testStr = strmatch(cleanNewText, "^[a-zA-Z0-9 :,?!_-]+$")
+		if strlen(cleanNewText) > 30 then
 			glog:warn("OnEditBoxChangedAddEvForm: max str length")
 			self:resetEditBoxAddEvForm(wndControl)
 		elseif testStr == nil and strNewText ~= "" then
@@ -4401,7 +4395,7 @@ function YACalendar:OnEditBoxChangedAddEvForm(wndHandler, wndControl, strNewText
 		
 		local intStrNewText = tonumber(strNewText)
 		
-		if string.len(strNewText) == 0 then
+		if strlen(strNewText) == 0 then
 			glog:debug("OnEditBoxChangedAddEvForm: empty EditBox (for integer)")
 			self:setOldValueEditBoxAddEvForm(wndControl, strNewText)
 		elseif intStrNewText == nil then
@@ -4428,7 +4422,7 @@ function YACalendar:OnEditBoxChangedAddEvForm(wndHandler, wndControl, strNewText
 				self:setOldValueEditBoxAddEvForm(wndControl, strNewText)
 				
 				-- if mode ~= "year" then
-				-- 	wndControl:SetText(string.format("%02d", tonumber(wndControl:GetText())))
+				-- 	wndControl:SetText(strformat("%02d", tonumber(wndControl:GetText())))
 				-- end
 				
 			end
@@ -4450,7 +4444,7 @@ function YACalendar:refreshWeekdayAddEvForm()
 	if evDateYear == nil or evDateMonth == nil or evDateDay == nil then
 		self.wndAddEv:FindChild("EventDateWeekday"):SetText("")
 		return false
-	elseif string.len(evDateYear:GetText()) == 0 or string.len(evDateMonth:GetText()) == 0 or string.len(evDateDay:GetText()) == 0 then
+	elseif strlen(evDateYear:GetText()) == 0 or strlen(evDateMonth:GetText()) == 0 or strlen(evDateDay:GetText()) == 0 then
 		self.wndAddEv:FindChild("EventDateWeekday"):SetText("")
 		return false
 	end
@@ -4503,7 +4497,7 @@ function YACalendar:resetEditBoxAddEvForm(wndControl)
 	else
 		wndControl:SetText("")
 	end
-	wndControl:SetSel(string.len(wndControl:GetText()))
+	wndControl:SetSel(strlen(wndControl:GetText()))
 	return true
 end
 
@@ -4600,9 +4594,9 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 	end
 	
 	-- check event name
-	local cleanEvNameStr = string.stripAccents(evName:GetText())
-	local testEvNameStr = string.match(cleanEvNameStr, "^[a-zA-Z0-9 :,?!_-]+$")
-	if string.len(cleanEvNameStr) == 0 or string.len(cleanEvNameStr) > 30 then
+	local cleanEvNameStr = strStripAccents(evName:GetText())
+	local testEvNameStr = strmatch(cleanEvNameStr, "^[a-zA-Z0-9 :,?!_-]+$")
+	if strlen(cleanEvNameStr) == 0 or strlen(cleanEvNameStr) > 30 then
 		glog:error("OnClickAddButtonAddEvForm: not right event name length")
 		DLG:Spawn("JustAMessage", {text = L["namenotgood"]})
 		evName:SetFocus()
@@ -4614,7 +4608,7 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 	end
 	
 	-- check event date
-	local dtStr = tostring(year) .. "-" .. string.format("%02d", month) .. "-" .. string.format("%02d", day) .. " " .. string.format("%02d", hour) .. ":" .. string.format("%02d", minute) .. ":" .. "00"
+	local dtStr = tostring(year) .. "-" .. strformat("%02d", month) .. "-" .. strformat("%02d", day) .. " " .. strformat("%02d", hour) .. ":" .. strformat("%02d", minute) .. ":" .. "00"
 	if testDateTime(dtStr) == false then
 		glog:error("OnClickAddButtonAddEvForm: bad date")
 		DLG:Spawn("JustAMessage", {text = L["baddate"]})
@@ -4625,12 +4619,12 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 		return false
 	end
 	
-	if string.len(self.CONFIG.currentCalendar) == 0 then
+	if strlen(self.CONFIG.currentCalendar) == 0 then
 		glog:error("OnClickAddButtonAddEvForm: no current calendar, this is a bug, report it")
 		return false
 	end
 	
-	local duration = string.format("%02d:%02d", durationhour, durationminute)
+	local duration = strformat("%02d:%02d", durationhour, durationminute)
 	
 	local evUniqueId = addCalendarEventByCalendarName(self.CONFIG.currentCalendar, evName:GetText(), dtStr, duration, GameLib:GetPlayerUnit():GetName())
 	if evUniqueId == false then
@@ -4646,7 +4640,7 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 	local messageEv = generateUpdateEventTableMessage(channel, self.CONFIG.currentCalendar, ev)
 	if type(messageEv) == "table" then
 		glog:debug("OnClickAddButtonAddEvForm: add an updateEvent message in sendSyncData")
-		table.insert(sendSyncData, messageEv)
+		tinsert(sendSyncData, messageEv)
 	else
 		glog:error("OnClickAddButtonAddEvForm: cant generate updateEvent message, this is a bug, report it")
 	end
@@ -4680,7 +4674,7 @@ end
 
 
 function YACalendar:OnClickCalendarConfigForm(wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation)
-	if string.sub(wndControl:GetName(), 1, 14) ~= "elementCalList" and wndControl:GetName() ~= "calName" then
+	if strsub(wndControl:GetName(), 1, 14) ~= "elementCalList" and wndControl:GetName() ~= "calName" then
 		return false
 	end
 	glog:debug("in OnClickCalendarConfigForm()")
@@ -4886,17 +4880,17 @@ function YACalendar:OnClickSaveButtonConfigForm(wndHandler, wndControl, eMouseBu
 	local calendarName = self.wndConfig:FindChild("NameTextBox"):GetText()
 	local calendarSalt = self.wndConfig:FindChild("SaltTextBox"):GetText()
 	
-	local calendarNameStripped = string.stripAccents(calendarName)
+	local calendarNameStripped = strStripAccents(calendarName)
 	
-	if string.len(calendarName) == 0 and string.len(calendarSalt) == 0 then
+	if strlen(calendarName) == 0 and strlen(calendarSalt) == 0 then
 		glog:debug("OnClickSaveButtonConfigForm: empty string")
 		DLG:Spawn("JustAMessage", {text = L["badnamesalt"]})
 		return false
-	elseif string.len(calendarName) > 30 or string.len(calendarSalt) > 30 then
+	elseif strlen(calendarName) > 30 or strlen(calendarSalt) > 30 then
 		glog:debug("OnClickSaveButtonConfigForm: too long string")
 		DLG:Spawn("JustAMessage", {text = L["badnamesalt"]})
 		return false
-	elseif string.match(calendarNameStripped, "^[a-zA-Z0-9 :,?!_-]+$") == nil or string.match(calendarSalt, "^[a-zA-Z0-9]+$") == nil then
+	elseif strmatch(calendarNameStripped, "^[a-zA-Z0-9 :,?!_-]+$") == nil or strmatch(calendarSalt, "^[a-zA-Z0-9]+$") == nil then
 		glog:debug("OnClickSaveButtonConfigForm: bad chars")
 		DLG:Spawn("JustAMessage", {text = L["badnamesalt"]})
 		return false
@@ -4958,7 +4952,7 @@ function YACalendar:OnEditBoxChangedConfigForm(wndHandler, wndControl, strText)
 	local calendarName = self.wndConfig:FindChild("NameTextBox"):GetText()
 	local calendarSalt = self.wndConfig:FindChild("SaltTextBox"):GetText()
 
-	if string.len(calendarName) > 0 and string.len(calendarSalt) > 0 then
+	if strlen(calendarName) > 0 and strlen(calendarSalt) > 0 then
 		saveButton:Enable(true)
 	else
 		saveButton:Enable(false)
