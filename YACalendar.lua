@@ -13,10 +13,20 @@ require "GuildLib"
 require "ICCommLib"
 require "Window"
 
+
+
 local setmetatable, pairs, ipairs, type, unpack = setmetatable, pairs, ipairs, type, unpack
 local tostring, tonumber = tostring, tonumber
 local string, table = string, table
 
+
+-- TODO: use all these upvalues :
+---- Upvalues
+--local error, type, tostring, select, pairs = error, type, tostring, select, pairs
+--local setmetatable, getmetatable, xpcall = setmetatable, getmetatable, xpcall
+--local assert, loadstring, rawset, next, unpack = assert, loadstring, rawset, next, unpack
+--local tconcat, tinsert, tremove, ostime = table.concat, table.insert, table.remove, os.time
+--local strformat = string.format
 
 
 -----------------------------------------------------------------------------------------------
@@ -2476,11 +2486,8 @@ function YACalendar:OnClickACT2Button(wndHandler, wndControl, eMouseButton)
 	
 	table.insert(sendSyncData, d)
 	
-	rover:AddWatch("OnClickACT2Button: sendSyncData", sendSyncData)
-	
-	
-	rover:AddWatch("OnClickACT2Button: receivedSyncData", receivedSyncData)
-	
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickACT2Button: sendSyncData", sendSyncData) end
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickACT2Button: receivedSyncData", receivedSyncData) end
 	
 end
 
@@ -3063,9 +3070,8 @@ end
 function YACalendar:loadCurrentCalendarWindow()
 	glog:debug("in loadCurrentCalendarWindow()")
 	
-	if DEVMODE == true then
-		rover:AddWatch("loadCurrentCalendarWindow: calendarData", calendarData)
-	end
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("loadCurrentCalendarWindow: calendarData", calendarData) end
+	
 	
 	
 	-- connect to all cal chan
@@ -3610,7 +3616,7 @@ function YACalendar:refreshAllEventsDay()
 	
 	
 	-- get all events date and sort it
-	rover:AddWatch("refreshAllEventsDay: eventsDay before", eventsDay)
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("refreshAllEventsDay: eventsDay before", eventsDay) end
 	table.sort(eventsDay, 
 		function(a,b)
 			local aEpoch = convertStrDateTimeToEpoch(a.eventDateTime)
@@ -3618,7 +3624,7 @@ function YACalendar:refreshAllEventsDay()
 			return aEpoch < bEpoch
 		end
 	)
-	rover:AddWatch("refreshAllEventsDay: eventsDay after", eventsDay)
+	if rover ~= nil then rover:AddWatch("refreshAllEventsDay: eventsDay after", eventsDay) end
 	
 	
 	-- loop on all events and show only not deleted
