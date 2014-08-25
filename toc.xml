@@ -9,4 +9,5 @@
     <Script Name="locales\frFR.lua"/>
     <Script Name="locales\enUS.lua"/>
     <Script Name="libs\GeminiLibDialog-1.0\LibDialog.lua"/>
+    <Script Name="libs\LibJSON\LibJSON-2.5.lua"/>
 </Addon>

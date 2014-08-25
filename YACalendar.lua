@@ -67,6 +67,12 @@ local DLG = nil
 
 
 
+---
+-- #object JSON encoder/decoder
+local JSON = nil
+
+
+
 -----------------------------------------------------------------------------------------------
 -- conf vars
 -----------------------------------------------------------------------------------------------
@@ -1107,10 +1113,10 @@ local function testEvent(ev, dontTestAllData)
 	elseif type(ev) ~= "table" then
 		glog:debug("testEvent: first param is not a table")
 		return false
-	elseif ev.eventName == nil or ev.eventCreator == nil or ev.eventDateTime == nil or ev.eventDuration == nil or ev.updateDate == nil or ev.isDeleted == nil then
+	elseif ev.eventName == nil or ev.eventCreator == nil or ev.eventDateTime == nil or ev.eventDuration == nil or ev.updateDate == nil or ev.isDeleted == nil or ev.options == nil then
 		glog:debug("testEvent: param contain nil value")
 		return false
-	elseif type(ev.eventName) ~= "string" or type(ev.eventCreator) ~= "string" or type(ev.eventDateTime) ~= "string" or type(ev.eventDuration) ~= "string" or type(ev.updateDate) ~= "string" or type(ev.isDeleted) ~= "boolean" then
+	elseif type(ev.eventName) ~= "string" or type(ev.eventCreator) ~= "string" or type(ev.eventDateTime) ~= "string" or type(ev.eventDuration) ~= "string" or type(ev.updateDate) ~= "string" or type(ev.isDeleted) ~= "boolean" or type(ev.options) ~= "table" then
 		glog:debug("testEvent: params are not good type")
 		return false
 	elseif strlen(ev.eventName) == 0 or strlen(ev.eventCreator) == 0 or testDateTime(ev.eventDateTime) == false or testDuration(ev.eventDuration) == false or testDateTime(ev.updateDate) == false or inTable({true, false}, ev.isDeleted) == false then
@@ -1157,6 +1163,7 @@ local function testParticipant(part)
 		glog:debug("testParticipant: param does not contain a valid data")
 		return false
 	end
+	-- TODO: add test options
 	return true
 end
 
@@ -1172,8 +1179,9 @@ end
 -- @param #string evUpdateDT (optional) event update datetime
 -- @param #boolean evIsDeleted (optional) event is deleted
 -- @param #string evForceUniqueId (optional) force an event uniqueId
+-- @param #table evOptions (optional) event options
 -- @return #string the event unique id, false on error
-local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateDT, evIsDeleted, evForceUniqueId)
+local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateDT, evIsDeleted, evForceUniqueId, evOptions)
 	if calId == nil or evName == nil or evDT == nil or evDur == nil or evCreator == nil then
 		glog:error("addCalendarEvent: params are nil")
 		return false
@@ -1223,6 +1231,16 @@ local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateD
 		uniqueId = getRandomUniqueId(evName) -- set a random unique event id
 	end
 	
+	-- evOptions is optional
+	local addOptions = {}
+	if evOptions ~= nil then
+		if type(evOptions) ~= "table" then
+			glog:error("addCalendarEvent: evOptions is not a table")
+			return false
+		end
+		addOptions = deepcopy(evOptions)
+	end
+	
 	-- check optional params
 	if testDateTime(evUpdateDT) == false then
 		glog:error("addCalendarEvent: bad event update datetime")
@@ -1240,6 +1258,7 @@ local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateD
 							updateDate = evUpdateDT,
 							isDeleted = evIsDeleted,
 							eventCreator = evCreator,
+							options = deepcopy(addOptions),
 							participants =	{}
 						}
 	tinsert(calendarData[calId].events, newEvent)
@@ -1255,8 +1274,12 @@ end
 -- @param #string evDT a SQL datetime
 -- @param #string evDur a duration
 -- @param #string evCreator event creator
+-- @param #string evUpdateDT (optional) event update datetime
+-- @param #boolean evIsDeleted (optional) event is deleted
+-- @param #string evForceUniqueId (optional) force an event uniqueId
+-- @param #table evOptions (optional) event options
 -- @return #string the event unique id
-local function addCalendarEventByCalendarName(calstr, evName, evDT, evDur, evCreator)
+local function addCalendarEventByCalendarName(calstr, evName, evDT, evDur, evCreator, evUpdateDT, evIsDeleted, evForceUniqueId, evOptions)
 	if calstr == nil or evName == nil or evDT == nil or evDur == nil or evCreator == nil then
 		glog:error("addCalendarEventByCalendarName: params are nil")
 		return false
@@ -1272,7 +1295,7 @@ local function addCalendarEventByCalendarName(calstr, evName, evDT, evDur, evCre
 	
 	local calid = getCalendarIdByName(calstr)
 	if type(calid) == "number" then
-		return addCalendarEvent(calid, evName, evDT, evDur, evCreator)
+		return addCalendarEvent(calid, evName, evDT, evDur, evCreator, evUpdateDT, evIsDeleted, evForceUniqueId, evOptions)
 	else
 		glog:error("addCalendarEventByCalendarName: cant get calendar id by name " .. calstr)
 		return false
@@ -1322,17 +1345,7 @@ local function getAllEventsDate(calId, year, month, day)
 	end
 	
 	-- year-month formatting
-	local yearStr = tostring(year)
-	local monthStr = tostring(month)
-	local dtStr = ""
-	if month <= 9 then
-		monthStr = "0" .. tostring(month)
-	end
-	if day <= 9 then
-		dtStr = yearStr .. "-" .. monthStr .. "-" .. "0" .. tostring(day)
-	else
-		dtStr = yearStr .. "-" .. monthStr .. "-" .. tostring(day)
-	end
+	local dtStr = tostring(year) .. "-" .. strformat("%02d", month) .. "-" .. strformat("%02d", day)
 	
 	-- loop on all events
 	for key,ev in pairs(events) do
@@ -1346,8 +1359,6 @@ local function getAllEventsDate(calId, year, month, day)
 	
 	return returnData
 end
-
-
 
 
 
@@ -1427,7 +1438,7 @@ local function addReplaceEvent(calid, uniqueid, event)
 	end
 	
 	local found = false
-	for evKey,evData in pairs(calendarData[calid].events) do
+	for evKey,evData in ipairs(calendarData[calid].events) do -- loop on all events
 	
 		if evData.uniqueId == uniqueid then
 			glog:debug("addReplaceEvent: event uniqueid found, replace event")
@@ -1436,13 +1447,14 @@ local function addReplaceEvent(calid, uniqueid, event)
 			calendarData[calid].events[evKey].eventDuration = event.eventDuration
 			calendarData[calid].events[evKey].updateDate = event.updateDate
 			calendarData[calid].events[evKey].isDeleted = event.isDeleted
+			calendarData[calid].events[evKey].options = event.options
 			return true
 		end
 	end
 	
 	-- cant found the event, add it
 	glog:debug("addReplaceEvent: cant found uniqueid, add event")
-	return addCalendarEvent(calid, event.eventName, event.eventDateTime, event.eventDuration, event.eventCreator, event.updateDate, event.isDeleted, uniqueid)
+	return addCalendarEvent(calid, event.eventName, event.eventDateTime, event.eventDuration, event.eventCreator, event.updateDate, event.isDeleted, uniqueid, event.options)
 end
 
 
@@ -1453,6 +1465,7 @@ end
 -- @param #table event the event to add or replace
 -- @return #boolean true if success, false on error
 local function addReplaceEventByCalendarName(calstr, uniqueid, event)
+	-- TODO: add options param
 	if calstr == nil or uniqueid == nil or event == nil then
 		glog:error("addReplaceEventByCalendarName: params are nil")
 		return false
@@ -1480,6 +1493,7 @@ end
 -- @param #string dt update datetime
 -- @return #boolean true if success, false on error
 local function addReplaceParticipant(calid, uniqueid, playername, status, dt)
+	-- TODO: add options param
 	glog:debug("in AddReplaceParticipant")
 	if calid == nil or uniqueid == nil or playername == nil or status == nil then
 		glog:error("AddReplaceParticipant: params are nil")
@@ -1541,6 +1555,7 @@ end
 -- @param #string dt update datetime
 -- @return #boolean true if success, false on error
 local function addReplaceParticipantByCalendarName(calstr, uniqueid, playername, status, dt)
+	-- TODO: add options param
 	if calstr == nil or uniqueid == nil or playername == nil or status == nil then
 		glog:error("addReplaceParticipantByCalendarName: params are nil")
 		return false
@@ -1838,17 +1853,12 @@ local function serializeMessage(dataTable)
 		return false
 	end
 	
-	local prejoin = {}
-	for dKey,dValue in pairs(dataTable.data) do
-		if dValue == true then
-			dValue = "true"
-		elseif dValue == false then
-			dValue = "false"
-		end
-		tinsert(prejoin, dKey .. "=" .. dValue)
-	end
-	local ret = dataTable.calendarname .. "," .. dataTable.command .. "," .. dataTable.eventuid .. "," .. tconcat(prejoin, "|")
-	-- glog:debug("serializeMessage: return " .. ret)
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("serializeMessage: dataTable.data", dataTable.data) end
+	local jsonData = JSON.encode(dataTable.data)
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("serializeMessage: jsonData", jsonData) end
+	
+	local ret = dataTable.calendarname .. "," .. dataTable.command .. "," .. dataTable.eventuid .. ",JSON:" .. jsonData
+	glog:debug("serializeMessage: return " .. ret)
 	return ret
 end
 
@@ -1867,7 +1877,9 @@ local function unserializeMessage(serializedDataString)
 		return false
 	end
 	
-	local calendarnameStr, commandStr, eventuidStr, dataStr = strmatch(serializedDataString, "([^,]+),([^,]+),([^,]+),([^,]*)")
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("unserializeMessage: serializedDataString", serializedDataString) end
+	
+	local calendarnameStr, commandStr, eventuidStr, dataStr = strmatch(serializedDataString, "([^,]+),([^,]+),([^,]+),JSON:(.*)")
 	if calendarnameStr == nil or commandStr == nil or eventuidStr == nil or dataStr == nil then
 		glog:error("unserializeMessage: parsed string are nil")
 		return false
@@ -1876,37 +1888,15 @@ local function unserializeMessage(serializedDataString)
 		return false
 	end
 	
-	local data = {}
 	
-	if strlen(dataStr) > 0 then
-		local postsplit = split(dataStr, "|")
-		if (type(postsplit) ~= "table") then
-			glog:error("unserializeMessage: cant split string")
-			return false
-		end
-		for dKey,dValue in pairs(postsplit) do
-			local spl = split(dValue, "=")
-			if type(spl) ~= "table" then
-				glog:error("unserializeMessage: cant split string")
-				return false
-			end
-			if spl[1] == nil or spl[2] == nil then
-				glog:error("unserializeMessage: cant parse data part in " .. serializedDataString)
-				return false
-			elseif strlen(spl[1]) == 0 or strlen(spl[2]) == 0 then
-				glog:error("unserializeMessage: empty data part in " .. serializedDataString)
-				return false
-			end
-			
-			-- boolean value management
-			if spl[2] == "true" then
-				spl[2] = true
-			elseif spl[2] == "false" then
-				spl[2] = false
-			end
-			
-			data[spl[1]] = spl[2]
-		end
+	local data = JSON.decode(dataStr)
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("unserializeMessage: data", data) end
+	if data == nil then
+		glog:error("unserializeMessage: bad data format")
+		return false
+	elseif type(data) ~= "table" then
+		glog:error("unserializeMessage: data is not a table")
+		return false
 	end
 	
 	local ret =	{
@@ -1915,7 +1905,7 @@ local function unserializeMessage(serializedDataString)
 					eventuid = eventuidStr,
 					data = data
 				}
-	
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("unserializeMessage: ret", ret) end
 	return ret
 end
 
@@ -2024,7 +2014,6 @@ function YACalendar:Init()
 	local tDependencies = {
 		-- "UnitOrPackageName",
 	}
-	-- TODO: ajouter une securite sur le chargement de gemini:console, surtout pour l'appender de logging
     Apollo.RegisterAddon(self, bHasConfigureFunction, strConfigureButtonText, tDependencies)
 end
 
@@ -2053,6 +2042,7 @@ function YACalendar:OnLoad()
 	md5 = Apollo.GetPackage("LibMd5-1").tPackage
 	rover = Apollo.GetAddon("Rover")
 	DLG = Apollo.GetPackage("Gemini:LibDialog-1.0").tPackage
+	JSON = Apollo.GetPackage("Lib:dkJSON-2.5").tPackage
 	
     -- load form file
 	self.xmlDoc = XmlDoc.CreateFromFile("YACalendar.xml")
@@ -2129,6 +2119,10 @@ function YACalendar:OnDocLoaded()
 		-- i18n
 		local GeminiLocale = Apollo.GetPackage("Gemini:Locale-1.0").tPackage
 		L = GeminiLocale:GetLocale("YACalendar", true)
+		
+		
+		-- TODO: some tests to check for global objects (md5, DLG, JSON, L...)
+		
 		
 		
 		-- i18n: translate all window
@@ -2657,7 +2651,7 @@ function YACalendar:Action1()
 	
 	
 	local testGetAllEventsDateByCalendarName1 = getAllEventsDateByCalendarName("phoque", 2014, 8, 25)
-	local testGetAllEventsDateByCalendarName2 = getAllEventsDateByCalendarName("a calendar name", 2014, 8, 25)
+	local testGetAllEventsDateByCalendarName2 = getAllEventsDateByCalendarName("the is a new name", 2014, 8, 25)
 	local testGetAllEventsDateByCalendarName3 = getAllEventsDateByCalendarName("an empty calendar name", 2014, 8, 25)
 	rover:AddWatch("testGetAllEventsDateByCalendarName1", testGetAllEventsDateByCalendarName1)
 	rover:AddWatch("testGetAllEventsDateByCalendarName2", testGetAllEventsDateByCalendarName2)
