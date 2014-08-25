@@ -4079,45 +4079,50 @@ function YACalendar:getAllEditBoxAddEvForm()
 	
 	local evName = self.wndAddEv:FindChild("EventNameTextBox")
 	if evName == nil then
-		glog:error("OnShowAddEvForm: cant find child EventNameTextBox")
+		glog:error("getAllEditBoxAddEvForm: cant find child EventNameTextBox")
 	end
 	
 	local evDateYear = self.wndAddEv:FindChild("EventDateYearTextBox")
 	if evDateYear == nil then
-		glog:error("OnShowAddEvForm: cant find child EventDateYearTextBox")
+		glog:error("getAllEditBoxAddEvForm: cant find child EventDateYearTextBox")
 	end
 	
 	local evDateMonth = self.wndAddEv:FindChild("EventDateMonthTextBox")
 	if evDateMonth == nil then
-		glog:error("OnShowAddEvForm: cant find child EventDateMonthTextBox")
+		glog:error("getAllEditBoxAddEvForm: cant find child EventDateMonthTextBox")
 	end
 	
 	local evDateDay = self.wndAddEv:FindChild("EventDateDayTextBox")
 	if evDateDay == nil then
-		glog:error("OnShowAddEvForm: cant find child EventDateDayTextBox")
+		glog:error("getAllEditBoxAddEvForm: cant find child EventDateDayTextBox")
 	end
 	
 	local evDateHour = self.wndAddEv:FindChild("EventHMHourTextBox")
 	if evDateHour == nil then
-		glog:error("OnShowAddEvForm: cant find child EventHMHourTextBox")
+		glog:error("getAllEditBoxAddEvForm: cant find child EventHMHourTextBox")
 	end
 	
 	local evDateMinute = self.wndAddEv:FindChild("EventHMMinuteTextBox")
 	if evDateMinute == nil then
-		glog:error("OnShowAddEvForm: cant find child EventHMMinuteTextBox")
+		glog:error("getAllEditBoxAddEvForm: cant find child EventHMMinuteTextBox")
 	end
 	
 	local evDurationHour = self.wndAddEv:FindChild("EventDurationHourTextBox")
 	if evDurationHour == nil then
-		glog:error("OnShowAddEvForm: cant find child EventDurationHourTextBox")
+		glog:error("getAllEditBoxAddEvForm: cant find child EventDurationHourTextBox")
 	end
 	
 	local evDurationMinute = self.wndAddEv:FindChild("EventDurationMinuteTextBox")
 	if evDurationMinute == nil then
-		glog:error("OnShowAddEvForm: cant find child EventDurationMinuteTextBox")
+		glog:error("getAllEditBoxAddEvForm: cant find child EventDurationMinuteTextBox")
 	end
 	
-	return {evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute}
+	local evComment = self.wndAddEv:FindChild("EventCommentTextBox")
+	if evComment == nil then
+		glog:error("getAllEditBoxAddEvForm: cant find child EventCommentTextBox")
+	end
+	
+	return {evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute, evComment}
 end
 
 
@@ -4130,8 +4135,8 @@ function YACalendar:OnShowAddEvForm(wndHandler, wndControl)
 	end
 	glog:debug("in OnShowAddEvForm()")
 	
-	local evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute = unpack(self:getAllEditBoxAddEvForm())
-	if evName == nil or evDateYear == nil or evDateMonth == nil or evDateDay == nil or evDateHour == nil or evDateMinute == nil or evDurationHour == nil or evDurationMinute == nil then
+	local evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute, evComment = unpack(self:getAllEditBoxAddEvForm())
+	if evName == nil or evDateYear == nil or evDateMonth == nil or evDateDay == nil or evDateHour == nil or evDateMinute == nil or evDurationHour == nil or evDurationMinute == nil or evComment == nil then
 		return false
 	end
 	
@@ -4175,6 +4180,8 @@ function YACalendar:OnShowAddEvForm(wndHandler, wndControl)
 											durationHour = evDurationHour:GetText(),
 											durationMinute = evDurationMinute:GetText()
 										}
+	
+	evComment:SetText("")
 	
 	
 	self:refreshWeekdayAddEvForm()
@@ -4572,8 +4579,8 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 	end
 	glog:debug("in OnClickAddButtonAddEvForm()")
 	
-	local evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute = unpack(self:getAllEditBoxAddEvForm())
-	if evName == nil or evDateYear == nil or evDateMonth == nil or evDateDay == nil or evDateHour == nil or evDateMinute == nil or evDurationHour == nil or evDurationMinute == nil then
+	local evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute, evComment = unpack(self:getAllEditBoxAddEvForm())
+	if evName == nil or evDateYear == nil or evDateMonth == nil or evDateDay == nil or evDateHour == nil or evDateMinute == nil or evDurationHour == nil or evDurationMinute == nil or evComment == nil then
 		return false
 	end
 	
@@ -4658,7 +4665,15 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 	
 	local duration = strformat("%02d:%02d", durationhour, durationminute)
 	
-	local evUniqueId = addCalendarEventByCalendarName(self.CONFIG.currentCalendar, evName:GetText(), dtStr, duration, GameLib:GetPlayerUnit():GetName())
+	
+	-- options data
+	local optionalData = {}
+	
+	if strlen(evComment:GetText()) > 0 then
+		optionalData.comment = evComment:GetText()
+	end
+	
+	local evUniqueId = addCalendarEventByCalendarName(self.CONFIG.currentCalendar, evName:GetText(), dtStr, duration, GameLib:GetPlayerUnit():GetName(), nil, nil, nil, optionalData)
 	if evUniqueId == false then
 		glog:error("OnClickAddButtonAddEvForm: cant add event")
 		return false
