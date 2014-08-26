@@ -3374,23 +3374,28 @@ function YACalendar:loadConfig(t)
 			self:DefaultSettings()
 		end
 		
-		if self.CONFIG.mainAnchorPoints ~= nil and type(self.CONFIG.mainAnchorPoints) == "table" then
-			self.wndMain:SetAnchorPoints(unpack(self.CONFIG.mainAnchorPoints))
-			glog:debug("loadConfig: loaded mainAnchorPoints")
-		end
+		-- if self.CONFIG.mainAnchorPoints ~= nil and type(self.CONFIG.mainAnchorPoints) == "table" then
+		-- 	self.wndMain:SetAnchorPoints(unpack(self.CONFIG.mainAnchorPoints))
+		-- 	glog:debug("loadConfig: loaded mainAnchorPoints")
+		-- end
 		
+		-- left, top, right, bottom
 		if self.CONFIG.mainAnchorOffsets ~= nil and type(self.CONFIG.mainAnchorOffsets) == "table" then
-			self.wndMain:SetAnchorOffsets(unpack(self.CONFIG.mainAnchorOffsets))
+			local leftNew, topNew, osef1, osef2 = unpack(self.CONFIG.mainAnchorOffsets)
+			local leftOld, topOld, rightOld, bottomOld = self.wndMain:GetAnchorOffsets()
+			self.wndMain:SetAnchorOffsets(leftNew, topNew, leftNew+(rightOld-leftOld), topNew+(bottomOld-topOld))
 			glog:debug("loadConfig: loaded mainAnchorOffsets")
 		end
 		
-		if self.CONFIG.partAnchorPoints ~= nil and type(self.CONFIG.partAnchorPoints) == "table" then
-			self.wndPartEv:SetAnchorPoints(unpack(self.CONFIG.partAnchorPoints))
-			glog:debug("loadConfig: loaded partAnchorPoints")
-		end
+		-- if self.CONFIG.partAnchorPoints ~= nil and type(self.CONFIG.partAnchorPoints) == "table" then
+		-- 	self.wndPartEv:SetAnchorPoints(unpack(self.CONFIG.partAnchorPoints))
+		-- 	glog:debug("loadConfig: loaded partAnchorPoints")
+		-- end
 		
 		if self.CONFIG.partAnchorOffsets ~= nil and type(self.CONFIG.partAnchorOffsets) == "table" then
-			self.wndPartEv:SetAnchorOffsets(unpack(self.CONFIG.partAnchorOffsets))
+			local leftNew, topNew, osef1, osef2 = unpack(self.CONFIG.partAnchorOffsets)
+			local leftOld, topOld, rightOld, bottomOld = self.wndPartEv:GetAnchorOffsets()
+			self.wndPartEv:SetAnchorOffsets(leftNew, topNew, leftNew+(rightOld-leftOld), topNew+(bottomOld-topOld))
 			glog:debug("loadConfig: loaded partAnchorOffsets")
 		end
 		
@@ -3875,6 +3880,12 @@ function YACalendar:OnShowPartEvForm(wndHandler, wndControl)
 	
 	wndControl:FindChild("EventDuration"):SetText(L["duration"] .. " " .. event.eventDuration)
 	wndControl:FindChild("EventCreator"):SetText(L["Created by:"] .. " " .. event.eventCreator)
+	
+	local comment = ""
+	if event.options.comment ~= nil and type(event.options.comment) == "string" and strlen(event.options.comment) > 0 then
+		comment = event.options.comment
+	end
+	wndControl:FindChild("EventComment"):SetText(L["Comment:"] .. "\n" .. comment)
 	
 	
 	-- disable button for old event

@@ -29,6 +29,7 @@ L["eventDateTime"] = "$7n, $8n $3n, $1n $4n:$5n"
 L["duration"] = "Duration: "
 L["Created by:"] = true
 L["Last update:"] = true
+L["Comment:"] = true
 
 L["coming"] = "Coming"
 L["notcoming"] = "Not coming"
