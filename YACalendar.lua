@@ -3655,7 +3655,7 @@ function YACalendar:refreshAllEventsDay()
 			return aEpoch < bEpoch
 		end
 	)
-	if rover ~= nil then rover:AddWatch("refreshAllEventsDay: eventsDay after", eventsDay) end
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("refreshAllEventsDay: eventsDay after", eventsDay) end
 	
 	
 	-- loop on all events and show only not deleted
@@ -4198,6 +4198,12 @@ function YACalendar:OnShowAddEvForm(wndHandler, wndControl)
 	self:refreshWeekdayAddEvForm()
 	
 	evName:SetFocus()
+	
+	local evEventRaidButton = self.wndAddEv:FindChild("EventRaidButton")
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnShowAddEvForm: evEventRaidButton", evEventRaidButton) end
+	evEventRaidButton:SetCheck(false)
+	self:OnClickRaidAddEvForm(nil, evEventRaidButton, nil)
+	
 end
 
 
@@ -4721,6 +4727,34 @@ function YACalendar:OnClickAddEvClose(wndHandler, wndControl, eMouseButton)
 	glog:debug("in OnClickAddEvClose()")
 	
 	self.wndAddEv:Close()
+end
+
+
+
+function YACalendar:OnClickRaidAddEvForm(wndHandler, wndControl, eMouseButton)
+	if wndControl:GetName() ~= "EventRaidButton" then
+		return false
+	end
+	
+	glog:debug("in OnClickRaidAddEvForm()")
+	
+	local raidWindow = self.wndAddEv:FindChild("RaidWindow")
+	local leftOld, topOld, rightOld, bottomOld = self.wndAddEv:GetAnchorOffsets()
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickRaidAddEvForm: anchorOffsets before", {self.wndAddEv:GetAnchorOffsets()}) end
+	
+	
+	-- show/hide raid frame
+	if wndControl:IsChecked() == true then
+		self.wndAddEv:SetAnchorOffsets(leftOld, topOld, rightOld, bottomOld+60)
+		raidWindow:Show(true)
+	else
+		self.wndAddEv:SetAnchorOffsets(leftOld, topOld, rightOld, bottomOld-60)
+		raidWindow:Show(false)
+	end
+
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickRaidAddEvForm: anchorOffsets after", {self.wndAddEv:GetAnchorOffsets()}) end
+
+
 end
 
 
