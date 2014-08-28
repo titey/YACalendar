@@ -61,6 +61,7 @@ L["baddate"] = "Il y a une erreur dans la date de l'événement"
 L["mustbeafternow"] = "La date/heure indiquée doit être supérieure à maintenant"
 L["namenotgood"] = "Le nom n'a pas la bonne longueur ou bien contient des caractères incorrects"
 L["dateintegererror"] = "Une erreur s'est glissée dans les champs dates"
+L["badraidmembers"] = "Une erreur s'est glissée dans la liste des membres du raid"
 
 L["configuration"] = "Configuration"
 L["titleconfig"] = "Configuration de Yet Another Calendar"

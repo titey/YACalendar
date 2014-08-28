@@ -61,6 +61,7 @@ L["baddate"] = "There is an error in the date"
 L["mustbeafternow"] = "The date/time must be after now"
 L["namenotgood"] = "The name have not a good length or contains bad char"
 L["dateintegererror"] = "An error is in date field"
+L["badraidmembers"] = "An error is in raid members"
 
 L["configuration"] = "Configuration"
 L["titleconfig"] = "Configuration of Yet Another Calendar"

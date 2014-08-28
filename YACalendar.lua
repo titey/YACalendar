@@ -21,6 +21,7 @@ local setmetatable, getmetatable, xpcall, assert = setmetatable, getmetatable, x
 local ostime, osdate = os.time, os.date
 local tconcat, tinsert, tremove, tsort = table.concat, table.insert, table.remove, table.sort
 local strformat, strlen, strfind, strmatch, strupper, strgfind, strsub, strlower = string.format, string.len, string.find, string.match, string.upper, string.gfind, string.sub, string.lower
+local mceil, mfloor = math.ceil, math.floor
 
 
 
@@ -99,7 +100,11 @@ local JSON = nil
 -- 				options = { #table optionals informations, but must be a table
 -- 					comment = #string (optional) an event comment
 -- 					type = #string (optional) can be "raid" to unlock the raid mode, linked to option "raidRole"
--- 					
+-- 					raidSlots = { #table linked to type=raid
+-- 						tank = #number number of tanks
+-- 						heal = #number number of healers
+-- 						dd = #number number of damage dealers
+-- 					}
 -- 				}
 -- 				participants = { #table all event participants, non-ordered
 -- 					{
@@ -4133,7 +4138,27 @@ function YACalendar:getAllEditBoxAddEvForm()
 		glog:error("getAllEditBoxAddEvForm: cant find child EventCommentTextBox")
 	end
 	
-	return {evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute, evComment}
+	local evRaidPlayers = self.wndAddEv:FindChild("EventRaidPlayersTextBox")
+	if evRaidPlayers == nil then
+		glog:error("getAllEditBoxAddEvForm: cant find child EventRaidPlayersTextBox")
+	end
+	
+	local evRaidTank = self.wndAddEv:FindChild("EventRaidTankTextBox")
+	if evRaidTank == nil then
+		glog:error("getAllEditBoxAddEvForm: cant find child EventRaidTankTextBox")
+	end
+	
+	local evRaidHeal = self.wndAddEv:FindChild("EventRaidHealTextBox")
+	if evRaidHeal == nil then
+		glog:error("getAllEditBoxAddEvForm: cant find child EventRaidHealTextBox")
+	end
+	
+	local evRaidDD = self.wndAddEv:FindChild("EventRaidDDTextBox")
+	if evRaidDD == nil then
+		glog:error("getAllEditBoxAddEvForm: cant find child EventRaidDDTextBox")
+	end
+	
+	return {evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute, evComment, evRaidPlayers, evRaidTank, evRaidHeal, evRaidDD}
 end
 
 
@@ -4198,11 +4223,15 @@ function YACalendar:OnShowAddEvForm(wndHandler, wndControl)
 	self:refreshWeekdayAddEvForm()
 	
 	evName:SetFocus()
-	
+
+	-- hide raid frame by default
 	local evEventRaidButton = self.wndAddEv:FindChild("EventRaidButton")
+	local raidWindow = self.wndAddEv:FindChild("RaidWindow")
 	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnShowAddEvForm: evEventRaidButton", evEventRaidButton) end
+	local leftOld, topOld, rightOld, bottomOld = self.wndAddEv:GetAnchorOffsets()
+	self.wndAddEv:SetAnchorOffsets(leftOld, topOld, rightOld, bottomOld-60)
+	raidWindow:Show(false)
 	evEventRaidButton:SetCheck(false)
-	self:OnClickRaidAddEvForm(nil, evEventRaidButton, nil)
 	
 end
 
@@ -4430,6 +4459,8 @@ end
 function YACalendar:OnEditBoxChangedAddEvForm(wndHandler, wndControl, strNewText)
 	
 	glog:debug("in OnEditBoxChangedAddEvForm()")
+	glog:debug("OnEditBoxChangedAddEvForm: control name " .. wndControl:GetName())
+
 	
 	if wndControl:GetName() == "EventNameTextBox" then
 		-- check alphanumeric string
@@ -4485,6 +4516,57 @@ function YACalendar:OnEditBoxChangedAddEvForm(wndHandler, wndControl, strNewText
 			
 		end
 		
+	elseif wndControl:GetName() == "EventRaidPlayersTextBox" or wndControl:GetName() == "EventRaidTankTextBox" or wndControl:GetName() == "EventRaidHealTextBox" or wndControl:GetName() == "EventRaidDDTextBox" then
+		local intStrNewText = tonumber(strNewText)
+		
+		if strlen(strNewText) == 0 then
+			glog:debug("OnEditBoxChangedAddEvForm: empty EditBox (for integer)")
+			self:setOldValueEditBoxAddEvForm(wndControl, strNewText)
+		elseif intStrNewText == nil then
+			glog:warn("OnEditBoxChangedAddEvForm: not an integer")
+			self:resetEditBoxAddEvForm(wndControl)
+		else
+		
+			if intStrNewText <= 0 then
+				glog:warn("OnEditBoxChangedAddEvForm: bad integer bound")
+				self:resetEditBoxAddEvForm(wndControl)
+			else
+				glog:debug("OnEditBoxChangedAddEvForm: integer ok")
+				self:setOldValueEditBoxAddEvForm(wndControl, strNewText)
+				
+				
+				local _, _, _, _, _, _, _, _, _, evRaidPlayers, evRaidTank, evRaidHeal, evRaidDD = unpack(self:getAllEditBoxAddEvForm())
+				
+				if DEVMODE == true and rover ~= nil then rover:AddWatch("OnEditBoxChangedAddEvForm: evRaidPlayers", evRaidPlayers) end
+				if DEVMODE == true and rover ~= nil then rover:AddWatch("OnEditBoxChangedAddEvForm: evRaidTank", evRaidTank) end
+				if DEVMODE == true and rover ~= nil then rover:AddWatch("OnEditBoxChangedAddEvForm: evRaidHeal", evRaidHeal) end
+				if DEVMODE == true and rover ~= nil then rover:AddWatch("OnEditBoxChangedAddEvForm: evRaidDD", evRaidDD) end
+				
+				-- autoupdate other players boxes
+				if wndControl:GetName() == "EventRaidPlayersTextBox" then
+					local percentTank, percentHeal = 15, 25
+					if intStrNewText <= 9 then
+						percentTank, percentHeal = 20, 20
+					elseif intStrNewText <= 19 then
+						percentTank, percentHeal = 20, 25
+					end
+					
+					local tank = mfloor(intStrNewText*percentTank/100)
+					local heal = mfloor(intStrNewText*percentHeal/100)
+					evRaidTank:SetText(tostring(tank))
+					evRaidHeal:SetText(tostring(heal))
+					evRaidDD:SetText(tostring(intStrNewText - tank - heal))
+				else
+					
+					if strlen(evRaidTank:GetText()) > 0 and strlen(evRaidHeal:GetText()) > 0 and strlen(evRaidDD:GetText()) > 0 then
+						local testTank, testHeal, testDD = tonumber(evRaidTank:GetText()), tonumber(evRaidHeal:GetText()), tonumber(evRaidDD:GetText())
+						evRaidPlayers:SetText(tostring(testTank + testHeal + testDD))
+					end
+					
+				end
+			end
+		
+		end
 	else
 		glog:error("OnEditBoxChangedAddEvForm: cant match any control")
 		return false
@@ -4543,6 +4625,14 @@ function YACalendar:resetEditBoxAddEvForm(wndControl)
 		target = self.oldEditBoxContentAddEvForm.durationHour
 	elseif wndControl:GetName() == "EventDurationMinuteTextBox" then
 		target = self.oldEditBoxContentAddEvForm.durationMinute
+	elseif wndControl:GetName() == "EventRaidPlayersTextBox" then
+		target = self.oldEditBoxContentAddEvForm.raidPlayers
+	elseif wndControl:GetName() == "EventRaidTankTextBox" then
+		target = self.oldEditBoxContentAddEvForm.raidTank
+	elseif wndControl:GetName() == "EventRaidHealTextBox" then
+		target = self.oldEditBoxContentAddEvForm.raidHeal
+	elseif wndControl:GetName() == "EventRaidDDTextBox" then
+		target = self.oldEditBoxContentAddEvForm.raidDD
 	else
 		glog:error("resetEditBoxAddEvForm: cant match any control")
 		return false
@@ -4579,6 +4669,14 @@ function YACalendar:setOldValueEditBoxAddEvForm(wndControl, strNewText)
 		self.oldEditBoxContentAddEvForm.durationHour = strNewText
 	elseif wndControl:GetName() == "EventDurationMinuteTextBox" then
 		self.oldEditBoxContentAddEvForm.durationMinute = strNewText
+	elseif wndControl:GetName() == "EventRaidPlayersTextBox" then
+		self.oldEditBoxContentAddEvForm.raidPlayers = strNewText
+	elseif wndControl:GetName() == "EventRaidTankTextBox" then
+		self.oldEditBoxContentAddEvForm.raidTank = strNewText
+	elseif wndControl:GetName() == "EventRaidHealTextBox" then
+		self.oldEditBoxContentAddEvForm.raidHeal = strNewText
+	elseif wndControl:GetName() == "EventRaidDDTextBox" then
+		self.oldEditBoxContentAddEvForm.raidDD = strNewText
 	else
 		glog:error("setOldValueEditBoxAddEvForm: cant match any control")
 		return false
@@ -4596,7 +4694,7 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 	end
 	glog:debug("in OnClickAddButtonAddEvForm()")
 	
-	local evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute, evComment = unpack(self:getAllEditBoxAddEvForm())
+	local evName, evDateYear, evDateMonth, evDateDay, evDateHour, evDateMinute, evDurationHour, evDurationMinute, evComment, evRaidPlayers, evRaidTank, evRaidHeal, evRaidDD = unpack(self:getAllEditBoxAddEvForm())
 	if evName == nil or evDateYear == nil or evDateMonth == nil or evDateDay == nil or evDateHour == nil or evDateMinute == nil or evDurationHour == nil or evDurationMinute == nil or evComment == nil then
 		return false
 	end
@@ -4680,16 +4778,46 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 		return false
 	end
 	
+	
 	local duration = strformat("%02d:%02d", durationhour, durationminute)
 	
 	
 	-- options data
 	local optionalData = {}
 	
+	-- comment box
 	if strlen(evComment:GetText()) > 0 then
 		optionalData.comment = evComment:GetText()
 	end
 	
+	-- raid event
+	local evRaidButton = self.wndAddEv:FindChild("EventRaidButton")
+	if evRaidButton == nil then
+		glog:error("OnClickAddButtonAddEvForm: cant find child EventRaidButton, this is a bug, report it")
+		return false
+	end
+	if evRaidButton:IsChecked() == true then
+		local nbRaidTank, evRaidHeal, evRaidDD = tonumber(evRaidTank:GetText()), tonumber(evRaidHeal:GetText()), tonumber(evRaidDD:GetText())
+		if nbRaidTank == nil or evRaidHeal == nil or evRaidDD == nil then
+			glog:warn("OnClickAddButtonAddEvForm: bad raid data")
+			DLG:Spawn("JustAMessage", {text = L["badraidmembers"]})
+			return false
+		elseif nbRaidTank <= 0 or evRaidHeal <= 0 or evRaidDD <= 0 then
+			glog:warn("OnClickAddButtonAddEvForm: bad raid data")
+			DLG:Spawn("JustAMessage", {text = L["badraidmembers"]})
+			return false
+		end
+	
+		-- cwxcwxc
+		optionalData.type = "raid"
+		optionalData.raidSlots = {
+			tank = nbRaidTank,
+			heal = evRaidHeal,
+			dd = evRaidDD
+		}
+	end
+	
+	-- add event to calendarData
 	local evUniqueId = addCalendarEventByCalendarName(self.CONFIG.currentCalendar, evName:GetText(), dtStr, duration, GameLib:GetPlayerUnit():GetName(), nil, nil, nil, optionalData)
 	if evUniqueId == false then
 		glog:error("OnClickAddButtonAddEvForm: cant add event")
@@ -4732,29 +4860,37 @@ end
 
 
 function YACalendar:OnClickRaidAddEvForm(wndHandler, wndControl, eMouseButton)
-	if wndControl:GetName() ~= "EventRaidButton" then
+	if wndControl:GetName() ~= "EventRaidButton" and wndControl:GetName() ~= "EventRaid" then
 		return false
 	end
 	
 	glog:debug("in OnClickRaidAddEvForm()")
 	
 	local raidWindow = self.wndAddEv:FindChild("RaidWindow")
-	local leftOld, topOld, rightOld, bottomOld = self.wndAddEv:GetAnchorOffsets()
-	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickRaidAddEvForm: anchorOffsets before", {self.wndAddEv:GetAnchorOffsets()}) end
+	local raidButton = self.wndAddEv:FindChild("EventRaidButton")
 	
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("serializeMessage: raidButton", raidButton) end
+	
+	local leftOld, topOld, rightOld, bottomOld = self.wndAddEv:GetAnchorOffsets()
 	
 	-- show/hide raid frame
-	if wndControl:IsChecked() == true then
+	local showRaidFrame = true
+	if wndControl:GetName() ~= "EventRaid" then
+		if raidButton:IsChecked() == true then showRaidFrame = true else showRaidFrame = false end
+	else
+		if raidButton:IsChecked() == true then showRaidFrame = false else showRaidFrame = true end
+	end
+	
+	if showRaidFrame == true then
 		self.wndAddEv:SetAnchorOffsets(leftOld, topOld, rightOld, bottomOld+60)
 		raidWindow:Show(true)
+		raidButton:SetCheck(true)
 	else
 		self.wndAddEv:SetAnchorOffsets(leftOld, topOld, rightOld, bottomOld-60)
 		raidWindow:Show(false)
+		raidButton:SetCheck(false)
 	end
-
-	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickRaidAddEvForm: anchorOffsets after", {self.wndAddEv:GetAnchorOffsets()}) end
-
-
+	
 end
 
 
