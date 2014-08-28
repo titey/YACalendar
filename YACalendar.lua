@@ -612,6 +612,38 @@ end
 
 
 ---
+-- deep compare 2 variables
+-- @param #mixed t1 the first variable
+-- @param #mixed t2 the second variable
+-- @param boolean (optional) ignore metatable
+-- @return boolean
+local function deepcompare(t1, t2, ignore_mt)
+	local ty1 = type(t1)
+	local ty2 = type(t2)
+	if ty1 ~= ty2 then return false end
+	
+	-- non-table types can be directly compared
+	if ty1 ~= 'table' and ty2 ~= 'table' then return t1 == t2 end
+	
+	-- as well as tables which have the metamethod __eq
+	local mt = getmetatable(t1)
+	if not ignore_mt and mt and mt.__eq then return t1 == t2 end
+	
+	for k1,v1 in pairs(t1) do
+		local v2 = t2[k1]
+		if v2 == nil or not deepcompare(v1,v2) then return false end
+	end
+	
+	for k2,v2 in pairs(t2) do
+		local v1 = t1[k2]
+		if v1 == nil or not deepcompare(v1,v2) then return false end
+	end
+	return true
+end
+
+
+
+---
 -- first char to uppercase
 -- @param #string str a string to uppercase the first char
 -- @return #string a string with first char uppercase
@@ -1168,7 +1200,19 @@ local function testParticipant(part)
 		glog:debug("testParticipant: param does not contain a valid data")
 		return false
 	end
-	-- TODO: add test options
+	
+	if part.options ~= nil then
+		if type(part.options) ~= "table" then
+			glog:debug("testParticipant: param options is not a valid type")
+			return false
+		elseif part.options.raidRole ~= nil then
+			if type(part.options.raidRole) ~= "table" then
+				glog:debug("testParticipant: param options.raidRole is not a valid type")
+				return false
+			end
+		end
+	end
+	
 	return true
 end
 
@@ -1470,7 +1514,6 @@ end
 -- @param #table event the event to add or replace
 -- @return #boolean true if success, false on error
 local function addReplaceEventByCalendarName(calstr, uniqueid, event)
-	-- TODO: add options param
 	if calstr == nil or uniqueid == nil or event == nil then
 		glog:error("addReplaceEventByCalendarName: params are nil")
 		return false
@@ -1495,32 +1538,41 @@ end
 -- @param #string uniqueid  the unique event id
 -- @param #string playername player name
 -- @param #string status status of the player
--- @param #string dt update datetime
+-- @param #table options
+-- @param #string dt (optional) update datetime
 -- @return #boolean true if success, false on error
-local function addReplaceParticipant(calid, uniqueid, playername, status, dt)
+local function addReplaceParticipant(calid, uniqueid, playername, status, options, dt)
 	-- TODO: add options param
-	glog:debug("in AddReplaceParticipant")
-	if calid == nil or uniqueid == nil or playername == nil or status == nil then
-		glog:error("AddReplaceParticipant: params are nil")
+	glog:debug("in addReplaceParticipant")
+	if calid == nil or uniqueid == nil or playername == nil or status == nil or options == nil then
+		glog:error("addReplaceParticipant: params are nil")
 		return false
-	elseif type(calid) ~= "number" or type(uniqueid) ~= "string" or type(playername) ~= "string" or type(status) ~= "string" then
-		glog:error("AddReplaceParticipant: bad params type")
+	elseif type(calid) ~= "number" or type(uniqueid) ~= "string" or type(playername) ~= "string" or type(status) ~= "string" or type(options) ~= "table" then
+		glog:error("addReplaceParticipant: bad params type")
 		return false
 	elseif testCalendarId(calid) == false or strlen(uniqueid) == 0 or strlen(playername) == 0 then
-		glog:error("AddReplaceParticipant: bad params content")
+		glog:error("addReplaceParticipant: bad params content")
 		return false
 	elseif inTable({"present", "maybe", "discard"}, status) == false then
-		glog:error("AddReplaceParticipant: bad status param")
+		glog:error("addReplaceParticipant: bad status param")
 		return false
+	end
+	
+	-- test if raid role is in options, check type
+	if options.raidRole ~= nil then
+		if type(options.raidRole) ~= "table" then
+			glog:error("addReplaceParticipant: bad options.raidRole param, not a table")
+			return false
+		end
 	end
 	
 	local playerDateTime = getDateTimeNow()
 	if dt ~= nil then
 		if type(dt) ~= "string" then
-			glog:error("AddReplaceParticipant: bad dt type")
+			glog:error("addReplaceParticipant: bad dt type")
 			return false
 		elseif testDateTime(dt) == false then
-			glog:error("AddReplaceParticipant: dt is not a SQL datetime")
+			glog:error("addReplaceParticipant: dt is not a SQL datetime")
 			return false
 		end
 		playerDateTime = dt
@@ -1534,19 +1586,20 @@ local function addReplaceParticipant(calid, uniqueid, playername, status, dt)
 				if partData.playerName == playername then
 					calendarData[calid].events[evKey].participants[partKey].playerStatus = status
 					calendarData[calid].events[evKey].participants[partKey].playerDateTime = playerDateTime
-					glog:debug("AddReplaceParticipant: found a participant entry(" .. tostring(partKey) .. "), update it")
+					calendarData[calid].events[evKey].participants[partKey].options = deepcopy(options)
+					glog:debug("addReplaceParticipant: found a participant entry(" .. tostring(partKey) .. "), update it")
 					return true
 				end
 			end
 			
 			-- ok, not found, add a participant entry
-			tinsert(calendarData[calid].events[evKey].participants, {playerName = playername, playerStatus = status, playerDateTime = playerDateTime})
-			glog:debug("AddReplaceParticipant: not found the participant entry (" .. playername .. "), add it")
+			tinsert(calendarData[calid].events[evKey].participants, {playerName = playername, playerStatus = status, playerDateTime = playerDateTime, options = deepcopy(options)})
+			glog:debug("addReplaceParticipant: not found the participant entry (" .. playername .. "), add it")
 			return true
 		end
 	end
 	
-	glog:error("AddReplaceParticipant: cant add or replace participant, cant match event by uniqueid")
+	glog:error("addReplaceParticipant: cant add or replace participant, cant match event by uniqueid")
 	return false
 end
 
@@ -1557,21 +1610,21 @@ end
 -- @param #string uniqueid the unique event id
 -- @param #string playername player name
 -- @param #string status status of the player
--- @param #string dt update datetime
+-- @param #table options
+-- @param #string dt (optional) update datetime
 -- @return #boolean true if success, false on error
-local function addReplaceParticipantByCalendarName(calstr, uniqueid, playername, status, dt)
-	-- TODO: add options param
-	if calstr == nil or uniqueid == nil or playername == nil or status == nil then
+local function addReplaceParticipantByCalendarName(calstr, uniqueid, playername, status, options, dt)
+	if calstr == nil or uniqueid == nil or playername == nil or status == nil or options == nil then
 		glog:error("addReplaceParticipantByCalendarName: params are nil")
 		return false
-	elseif type(calstr) ~= "string" or type(uniqueid) ~= "string" or type(playername) ~= "string" or type(status) ~= "string" then
+	elseif type(calstr) ~= "string" or type(uniqueid) ~= "string" or type(playername) ~= "string" or type(status) ~= "string" or type(options) ~= "table" then
 		glog:error("addReplaceParticipantByCalendarName: bad params type")
 		return false
 	end
 	
 	local calid = getCalendarIdByName(calstr)
 	if type(calid) == "number" then
-		return addReplaceParticipant(calid, uniqueid, playername, status, dt)
+		return addReplaceParticipant(calid, uniqueid, playername, status, options, dt)
 	else
 		glog:error("addReplaceParticipantByCalendarName: cant get calendar id by name " .. calstr)
 		return false
@@ -1655,8 +1708,10 @@ end
 -- @param #string uniqueid the unique event id
 -- @param #string playername player name
 -- @param #string status status of the player
+-- @param #table options (optional) player options
+-- @param #boolean testRaidRole (optional) test the raid role in options
 -- @return #boolean true if success, false on error
-local function testParticipantNameStatus(calid, uniqueid, playername, status)
+local function testParticipantNameStatus(calid, uniqueid, playername, status, options, testRaidRole)
 	if calid == nil or uniqueid == nil or playername == nil or status == nil then
 		glog:error("testParticipantNameStatus: params are nil")
 		return false
@@ -1671,6 +1726,35 @@ local function testParticipantNameStatus(calid, uniqueid, playername, status)
 		return false
 	end
 	
+	-- test optional param "options"
+	if options ~= nil then
+		if type(options) ~= "table" then
+			glog:error("testParticipantNameStatus: bad options param, needs to be a table")
+			return false
+		end
+	end
+	
+	-- test optional param testRaidRole
+	if testRaidRole ~= nil then
+		if type(testRaidRole) ~= "boolean" then
+			glog:error("testParticipantNameStatus: bad testRaidRole param, needs to be a boolean")
+			return false
+		end
+	else
+		testRaidRole = false
+	end
+	
+	if testRaidRole == true then
+		if options.raidRole == nil then
+			glog:error("testParticipantNameStatus: need to test raidRole but options.raidRole is nil")
+			return false
+		elseif type(options.raidRole) ~= "table" then
+			glog:error("testParticipantNameStatus: need to test raidRole but options.raidRole param is not a table")
+			return false
+		end
+	end
+	
+	
 	-- select the calendar
 	local calendar = getCalendarById(calid)
 	if type(calendar) ~= "table" then
@@ -1681,20 +1765,37 @@ local function testParticipantNameStatus(calid, uniqueid, playername, status)
 		return false
 	end
 	
+	
 	for evKey,evData in pairs(calendar.events) do
 		if evData.uniqueId == uniqueid then
 			local participants = evData.participants
 			
 			for partKey,partData in pairs(participants) do
+			
 				if partData.playerName == playername and partData.playerStatus == status then
-					glog:debug("testParticipantNameStatus: found participant playername+status")
-					return true
+					if testRaidRole == true then
+						
+						-- if DEVMODE == true and rover ~= nil and partData.options ~= nil then rover:AddWatch("testParticipantNameStatus: partData.options.raidRole", partData.options.raidRole) end
+						-- if DEVMODE == true and rover ~= nil then rover:AddWatch("testParticipantNameStatus: options.raidRole", options.raidRole) end
+						
+						if partData.options ~= nil and type(partData.options) == "table" and partData.options.raidRole ~= nil and type(partData.options.raidRole) == "table" and deepcompare(partData.options.raidRole, options.raidRole, true) == true then
+							glog:debug("testParticipantNameStatus: found participant playername+status+raidrole")
+							return true
+						end
+					elseif testRaidRole == false then
+						glog:debug("testParticipantNameStatus: found participant playername+status")
+						return true
+					end
 				end
 			end
 		end
 	end
 	
-	glog:debug("testParticipantNameStatus: cant find playername+status")
+	if testRaidRole == true then
+		glog:debug("testParticipantNameStatus: cant find playername+status+raidrole")
+	else
+		glog:debug("testParticipantNameStatus: cant find playername+status")
+	end
 	return false
 end
 
@@ -1705,8 +1806,10 @@ end
 -- @param #string uniqueid the unique event id
 -- @param #string playername player name
 -- @param #string status status of the player
+-- @param #table options (optional) player options
+-- @param #boolean testRaidRole (optional) test the raid role in options
 -- @return #boolean true if success, false on error
-local function testParticipantNameStatusByCalendarName(calstr, uniqueid, playername, status)
+local function testParticipantNameStatusByCalendarName(calstr, uniqueid, playername, status, options, testRaidRole)
 	if calstr == nil or uniqueid == nil or playername == nil or status == nil then
 		glog:error("testParticipantNameStatusByCalendarName: params are nil")
 		return false
@@ -1717,7 +1820,7 @@ local function testParticipantNameStatusByCalendarName(calstr, uniqueid, playern
 		
 	local calid = getCalendarIdByName(calstr)
 	if type(calid) == "number" then
-		return testParticipantNameStatus(calid, uniqueid, playername, status)
+		return testParticipantNameStatus(calid, uniqueid, playername, status, options, testRaidRole)
 	else
 		glog:error("testParticipantNameStatusByCalendarName: cant get calendar id by name " .. calstr)
 		return false
@@ -2353,7 +2456,7 @@ function YACalendar:OnTimer()
 				end
 				
 				if okAddReplace == true then -- ok, we can update or add the event
-					local addPartStatus = addReplaceParticipantByCalendarName(cal.name, valueRSD.eventuid, newParticipant.playerName, newParticipant.playerStatus, newParticipant.playerDateTime)
+					local addPartStatus = addReplaceParticipantByCalendarName(cal.name, valueRSD.eventuid, newParticipant.playerName, newParticipant.playerStatus, newParticipant.options, newParticipant.playerDateTime)
 					if addPartStatus == false then
 						glog:error("OnTimer: cant add/replace participant")
 					else
@@ -3721,9 +3824,8 @@ function YACalendar:updateEventDayCalEvForm(evPos, evData)
 	self.calEventsWindows[evPos]:FindChild("PlayerStatusIcon"):SetSprite("")
 	
 	-- get participants informations
-	local presentCounter = 0
-	local discardCounter = 0
-	local maybeCounter = 0
+	local presentCounter, discardCounter, maybeCounter = 0, 0, 0
+	local countRaidTank, countRaidHeal, countRaidDD = 0, 0, 0
 	local playerStatus = "" -- player participate status ?
 	for partKey, partValue in ipairs(evData.participants) do
 	
@@ -3745,9 +3847,23 @@ function YACalendar:updateEventDayCalEvForm(evPos, evData)
 		else
 			maybeCounter = maybeCounter + 1
 		end
+		
+		-- count raid role
+		if evData.options.type ~= nil and evData.options.type == "raid" and type(evData.options.raidSlots) == "table" then
+			if partValue.options ~= nil and type(partValue.options) == "table" then
+				if inTable(partValue.options.raidRole, "tank") == true then -- role tank
+					countRaidTank = countRaidTank + 1
+				end
+				if inTable(partValue.options.raidRole, "heal") == true then -- role heal
+					countRaidHeal = countRaidHeal + 1
+				end
+				if inTable(partValue.options.raidRole, "dd") == true then -- role dd
+					countRaidDD = countRaidDD + 1
+				end
+
+			end
+		end
 	end
-	
-	
 	
 	
 	-- update participants detail frame
@@ -3757,6 +3873,15 @@ function YACalendar:updateEventDayCalEvForm(evPos, evData)
 	end
 	local participantsDetailStr = String_GetWeaselString(L["participantsdetail"], tostring(#evData.participants), partStr, L["comingcolon"] .. " " .. tostring(presentCounter), L["notcomingcolon"] .. " " .. tostring(discardCounter), L["uncertaincolon"] .. " " .. tostring(maybeCounter))
 	self.calEventsWindows[evPos]:FindChild("PartDetail"):SetText(participantsDetailStr)
+	
+	-- raid mode ?
+	if evData.options.type ~= nil and evData.options.type == "raid" and type(evData.options.raidSlots) == "table" then
+		self.calEventsWindows[evPos]:FindChild("PartDetail"):SetText(self.calEventsWindows[evPos]:FindChild("PartDetail"):GetText() .. "\n"
+			.. L["eventtankcolon"] .. " " .. tostring(countRaidTank) .. " / "
+			.. L["eventhealcolon"] .. " " .. tostring(countRaidHeal) .. " / "
+			.. L["eventddcolon"] .. " " .. tostring(countRaidDD)
+		)
+	end
 	
 	-- show the window
 	self.calEventsWindows[evPos]:Show(true)
@@ -3913,6 +4038,49 @@ function YACalendar:OnShowPartEvForm(wndHandler, wndControl)
 		buttonDelete:Show(false)
 	end
 	
+	
+	-- raid frame
+	if event.options.type ~= nil and event.options.type == "raid" and type(event.options.raidSlots) == "table" then
+		wndControl:FindChild("RaidWindow"):Show(true)
+		
+		-- get raid buttons
+		local evRaidTankButton, evRaidHealButton, evRaidDDButton = wndControl:FindChild("RaidTankButton"), wndControl:FindChild("RaidHealButton"), wndControl:FindChild("RaidDDButton")
+		if evRaidTankButton == nil or evRaidHealButton == nil or evRaidDDButton == nil then
+			glog:error("OnClickButtonHerePartEvForm: cant find child button")
+			return false
+		end
+		
+		evRaidTankButton:SetCheck(false)
+		evRaidHealButton:SetCheck(false)
+		evRaidDDButton:SetCheck(false)
+		
+		local playername = GameLib:GetPlayerUnit():GetName() -- player name
+		
+		-- loop on all participants, and get current raid role
+		local participants = event.participants
+		for id,playerInfo in pairs(participants) do
+			if playerInfo.playerName == playername and playerInfo.options ~= nil and playerInfo.options.raidRole ~= nil and type(playerInfo.options.raidRole) == "table" then
+			
+				glog:debug("OnShowPartEvForm: found a raid role")
+				
+				if inTable(playerInfo.options.raidRole, "tank") == true then -- role tank
+					evRaidTankButton:SetCheck(true)
+					glog:debug("OnShowPartEvForm: check role tank")
+				elseif inTable(playerInfo.options.raidRole, "heal") == true then -- role heal
+					evRaidHealButton:SetCheck(true)
+					glog:debug("OnShowPartEvForm: check role heal")
+				elseif inTable(playerInfo.options.raidRole, "dd") == true then -- role dd
+					evRaidDDButton:SetCheck(true)
+					glog:debug("OnShowPartEvForm: check role dd")
+				end
+				
+			end
+		end
+		
+	else
+		wndControl:FindChild("RaidWindow"):Show(false)
+	end
+	
 	self:refreshParticipantsList()
 
 end
@@ -3932,9 +4100,8 @@ function YACalendar:refreshParticipantsList()
 	end
 
 	local participants = event.participants -- event participants
-	
-
 	local partList = self.wndPartEv:FindChild("ParticipantsList") -- the participants list
+	local countRaidTank, countRaidHeal, countRaidDD = 0, 0, 0
 	
 	-- clear the list
 	local children = partList:GetChildren()
@@ -3973,9 +4140,39 @@ function YACalendar:refreshParticipantsList()
 		else
 			partWindow:FindChild("PlayerStatus"):SetSprite("ClientSprites:QuestJewel_Decline")
 		end
+		
+		if event.options.type ~= nil and event.options.type == "raid" and type(event.options.raidSlots) == "table" then
+			if playerInfo.options ~= nil and type(playerInfo.options) == "table" then
+				if inTable(playerInfo.options.raidRole, "tank") == true then -- role tank
+					countRaidTank = countRaidTank + 1
+					partWindow:FindChild("PlayerRaidRole"):SetText(L["tank"])
+				end
+				if inTable(playerInfo.options.raidRole, "heal") == true then -- role heal
+					countRaidHeal = countRaidHeal + 1
+					partWindow:FindChild("PlayerRaidRole"):SetText(L["heal"])
+				end
+				if inTable(playerInfo.options.raidRole, "dd") == true then -- role dd
+					countRaidDD = countRaidDD + 1
+					partWindow:FindChild("PlayerRaidRole"):SetText(L["dd"])
+				end
+
+			end
+		else
+			partWindow:FindChild("PlayerRaidRole"):SetText("")
+		end
+		
 	end
 	
 	partList:ArrangeChildrenVert()
+	
+	-- refresh raid frame, if needed
+	if event.options.type ~= nil and event.options.type == "raid" and type(event.options.raidSlots) == "table" then
+		self.wndPartEv:FindChild("RaidPlayersTitle"):SetText(L["eventplayerscolon"] .. " " .. tostring(countRaidTank + countRaidHeal + countRaidDD) .. " (" .. tostring(event.options.raidSlots.tank + event.options.raidSlots.heal + event.options.raidSlots.dd) .. ")")
+		self.wndPartEv:FindChild("RaidCompoTitle"):SetText(
+			L["eventtankcolon"] .. " " .. tostring(countRaidTank) .. " (" .. tostring(event.options.raidSlots.tank) .. ")\n"
+			.. L["eventhealcolon"] .. " " .. tostring(countRaidHeal) .. " (" .. tostring(event.options.raidSlots.heal) .. ")\n"
+			.. L["eventddcolon"] .. " " .. tostring(countRaidDD) .. " (" .. tostring(event.options.raidSlots.dd) .. ")")
+	end
 
 end
 
@@ -4026,12 +4223,48 @@ function YACalendar:OnClickButtonHerePartEvForm(wndHandler, wndControl, eMouseBu
 		return false
 	end
 	
-	if testParticipantNameStatusByCalendarName(self.CONFIG.currentCalendar, uniqueIdEvent, playername, clickOn) == true then
+	local optionsPart = {}
+	local testRaidRole = false
+	
+	-- raid event
+	if event.options ~= nil and event.options.type ~= nil and event.options.type == "raid" then
+		optionsPart.raidRole = {}
+
+	
+		local evRaidTankButton, evRaidHealButton, evRaidDDButton = self.wndPartEv:FindChild("RaidTankButton"), self.wndPartEv:FindChild("RaidHealButton"), self.wndPartEv:FindChild("RaidDDButton")
+		if evRaidTankButton == nil or evRaidHealButton == nil or evRaidDDButton == nil then
+			glog:error("OnClickButtonHerePartEvForm: cant find child button")
+			return false
+		elseif evRaidTankButton:IsChecked() == false and evRaidHealButton:IsChecked() == false and evRaidDDButton:IsChecked() == false then
+			glog:error("OnClickButtonHerePartEvForm: no button checked")
+			DLG:Spawn("JustAMessage", {text = L["errorraidcheckbutton"]})
+			return false
+		end
+		
+		if evRaidTankButton:IsChecked() == true then
+			tinsert(optionsPart.raidRole, "tank")
+			testRaidRole = true
+		end
+		if evRaidHealButton:IsChecked() == true then
+			tinsert(optionsPart.raidRole, "heal")
+			testRaidRole = true
+		end
+		if evRaidDDButton:IsChecked() == true then
+			tinsert(optionsPart.raidRole, "dd")
+			testRaidRole = true
+		end
+	end
+	
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickButtonHerePartEvForm: testRaidRole", testRaidRole) end
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickButtonHerePartEvForm: optionsPart", optionsPart) end
+	
+	
+	if testParticipantNameStatusByCalendarName(self.CONFIG.currentCalendar, uniqueIdEvent, playername, clickOn, optionsPart, testRaidRole) == true then
 		glog:info("OnClickButtonHerePartEvForm: add/update useless, same status")
 		return false
 	end
 	
-	local result = addReplaceParticipantByCalendarName(self.CONFIG.currentCalendar, uniqueIdEvent, playername, clickOn)
+	local result = addReplaceParticipantByCalendarName(self.CONFIG.currentCalendar, uniqueIdEvent, playername, clickOn, optionsPart)
 	if result == false then
 		glog:error("OnClickButtonHerePartEvForm: cant add/replace participant")
 		return false
