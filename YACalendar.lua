@@ -2032,6 +2032,9 @@ local function generateUpdateEventTableMessage(channel, calendarname, event)
 		glog:error("generateUpdateEventTableMessage: bad params type")
 		return false
 	elseif strlen(channel) == 0 or strlen(calendarname) == 0 or testEvent(event, true) == false then
+		if DEVMODE == true and rover ~= nil then rover:AddWatch("generateUpdateEventTableMessage: channel", channel) end
+		if DEVMODE == true and rover ~= nil then rover:AddWatch("generateUpdateEventTableMessage: calendarname", calendarname) end
+		if DEVMODE == true and rover ~= nil then rover:AddWatch("generateUpdateEventTableMessage: event", event) end
 		glog:error("generateUpdateEventTableMessage: empty data")
 		return false
 	elseif (event.uniqueId) == nil then
@@ -2384,25 +2387,30 @@ function YACalendar:OnTimer()
 				if #cal.events > 0 then
 					for keyEv, valueEv in ipairs(cal.events) do
 						
-						
 						-- push an updateEvent
+						local errorSpotted = 0
 						local messageEv = generateUpdateEventTableMessage(valueRSD.channel, valueRSD.calendarname, valueEv)
 						if type(messageEv) == "table" then
-							glog:debug("OnTimer: add an updateEvent message in sendSyncData")
+							glog:debug("OnTimer: add an updateEvent message in sendSyncData (uniqueId=" .. valueEv.uniqueId .. ")")
 							tinsert(sendSyncData, messageEv)
 						else
 							glog:error("OnTimer: cant generate updateEvent message, this is a bug, report it")
+							errorSpotted = errorSpotted + 1
 						end
 						
 						-- push all participants
-						for keyvaluePart, valuePart in ipairs(valueEv.participants) do
-							local messagePart = generateUpdateParticipantTableMessage(valueRSD.channel, valueRSD.calendarname, valueEv.uniqueId, valuePart)
-							if type(messagePart) == "table" then
-								glog:debug("OnTimer: add an updateParticipant message in sendSyncData")
-								tinsert(sendSyncData, messagePart)
-							else
-								glog:error("OnTimer: cant generate updateParticipant message, this is a bug, report it")
+						if errorSpotted == 0 then
+							for keyvaluePart, valuePart in ipairs(valueEv.participants) do
+								local messagePart = generateUpdateParticipantTableMessage(valueRSD.channel, valueRSD.calendarname, valueEv.uniqueId, valuePart)
+								if type(messagePart) == "table" then
+									glog:debug("OnTimer: add an updateParticipant message in sendSyncData")
+									tinsert(sendSyncData, messagePart)
+								else
+									glog:error("OnTimer: cant generate updateParticipant message, this is a bug, report it")
+								end
 							end
+						else
+							glog:debug("OnTimer: error spotted in updateEvent, dont send updateParticipant")
 						end
 					end
 				else
@@ -2456,6 +2464,10 @@ function YACalendar:OnTimer()
 				end
 				
 				if okAddReplace == true then -- ok, we can update or add the event
+				
+					
+					if newParticipant.options == nil then newParticipant.options = {} end -- TODO: bad patch
+					
 					local addPartStatus = addReplaceParticipantByCalendarName(cal.name, valueRSD.eventuid, newParticipant.playerName, newParticipant.playerStatus, newParticipant.options, newParticipant.playerDateTime)
 					if addPartStatus == false then
 						glog:error("OnTimer: cant add/replace participant")
@@ -3849,7 +3861,7 @@ function YACalendar:updateEventDayCalEvForm(evPos, evData)
 		end
 		
 		-- count raid role
-		if evData.options.type ~= nil and evData.options.type == "raid" and type(evData.options.raidSlots) == "table" then
+		if evData.options ~= nil and type(evData.options) == "table" and evData.options.type ~= nil and evData.options.type == "raid" and type(evData.options.raidSlots) == "table" then
 			if partValue.options ~= nil and type(partValue.options) == "table" then
 				if inTable(partValue.options.raidRole, "tank") == true then -- role tank
 					countRaidTank = countRaidTank + 1
@@ -3875,7 +3887,7 @@ function YACalendar:updateEventDayCalEvForm(evPos, evData)
 	self.calEventsWindows[evPos]:FindChild("PartDetail"):SetText(participantsDetailStr)
 	
 	-- raid mode ?
-	if evData.options.type ~= nil and evData.options.type == "raid" and type(evData.options.raidSlots) == "table" then
+	if evData.options ~= nil and type(evData.options) == "table" and evData.options.type ~= nil and evData.options.type == "raid" and type(evData.options.raidSlots) == "table" then
 		self.calEventsWindows[evPos]:FindChild("PartDetail"):SetText(self.calEventsWindows[evPos]:FindChild("PartDetail"):GetText() .. "\n"
 			.. L["eventtankcolon"] .. " " .. tostring(countRaidTank) .. " / "
 			.. L["eventhealcolon"] .. " " .. tostring(countRaidHeal) .. " / "
@@ -4012,7 +4024,7 @@ function YACalendar:OnShowPartEvForm(wndHandler, wndControl)
 	wndControl:FindChild("EventCreator"):SetText(L["Created by:"] .. " " .. event.eventCreator)
 	
 	local comment = ""
-	if event.options.comment ~= nil and type(event.options.comment) == "string" and strlen(event.options.comment) > 0 then
+	if event.options ~= nil and type(event.options) == "table" and event.options.comment ~= nil and type(event.options.comment) == "string" and strlen(event.options.comment) > 0 then
 		comment = event.options.comment
 	end
 	wndControl:FindChild("EventComment"):SetText(L["Comment:"] .. "\n" .. comment)
@@ -4040,7 +4052,7 @@ function YACalendar:OnShowPartEvForm(wndHandler, wndControl)
 	
 	
 	-- raid frame
-	if event.options.type ~= nil and event.options.type == "raid" and type(event.options.raidSlots) == "table" then
+	if event.options ~= nil and type(event.options) == "table" and event.options.type ~= nil and event.options.type == "raid" and type(event.options.raidSlots) == "table" then
 		wndControl:FindChild("RaidWindow"):Show(true)
 		
 		-- get raid buttons
@@ -4141,7 +4153,7 @@ function YACalendar:refreshParticipantsList()
 			partWindow:FindChild("PlayerStatus"):SetSprite("ClientSprites:QuestJewel_Decline")
 		end
 		
-		if event.options.type ~= nil and event.options.type == "raid" and type(event.options.raidSlots) == "table" then
+		if event.options ~= nil and type(event.options) == "table" and event.options.type ~= nil and event.options.type == "raid" and type(event.options.raidSlots) == "table" then
 			if playerInfo.options ~= nil and type(playerInfo.options) == "table" then
 				if inTable(playerInfo.options.raidRole, "tank") == true then -- role tank
 					countRaidTank = countRaidTank + 1
@@ -4166,7 +4178,7 @@ function YACalendar:refreshParticipantsList()
 	partList:ArrangeChildrenVert()
 	
 	-- refresh raid frame, if needed
-	if event.options.type ~= nil and event.options.type == "raid" and type(event.options.raidSlots) == "table" then
+	if event.options ~= nil and type(event.options) == "table" and event.options.type ~= nil and event.options.type == "raid" and type(event.options.raidSlots) == "table" then
 		self.wndPartEv:FindChild("RaidPlayersTitle"):SetText(L["eventplayerscolon"] .. " " .. tostring(countRaidTank + countRaidHeal + countRaidDD) .. " (" .. tostring(event.options.raidSlots.tank + event.options.raidSlots.heal + event.options.raidSlots.dd) .. ")")
 		self.wndPartEv:FindChild("RaidCompoTitle"):SetText(
 			L["eventtankcolon"] .. " " .. tostring(countRaidTank) .. " (" .. tostring(event.options.raidSlots.tank) .. ")\n"
@@ -4227,7 +4239,7 @@ function YACalendar:OnClickButtonHerePartEvForm(wndHandler, wndControl, eMouseBu
 	local testRaidRole = false
 	
 	-- raid event
-	if event.options ~= nil and event.options.type ~= nil and event.options.type == "raid" then
+	if event.options ~= nil and type(event.options) == "table" and event.options.type ~= nil and event.options.type == "raid" then
 		optionsPart.raidRole = {}
 
 	
@@ -5061,10 +5073,10 @@ function YACalendar:OnClickAddButtonAddEvForm(wndHandler, wndControl, eMouseButt
 	-- TODO: rework this code, put it in a function
 	local cal = getCalendarByName(self.CONFIG.currentCalendar)
 	local channel = generateChannelName(cal.name, cal.salt)
-	local ev = getEventUniqueIdByCalendarName(self.CONFIG.currentCalendar ,evUniqueId)
+	local ev = getEventUniqueIdByCalendarName(self.CONFIG.currentCalendar, evUniqueId)
 	local messageEv = generateUpdateEventTableMessage(channel, self.CONFIG.currentCalendar, ev)
 	if type(messageEv) == "table" then
-		glog:debug("OnClickAddButtonAddEvForm: add an updateEvent message in sendSyncData")
+		glog:debug("OnClickAddButtonAddEvForm: add an updateEvent message in sendSyncData (uniqueId=" .. evUniqueId .. ")")
 		tinsert(sendSyncData, messageEv)
 	else
 		glog:error("OnClickAddButtonAddEvForm: cant generate updateEvent message, this is a bug, report it")
