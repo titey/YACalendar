@@ -44,6 +44,7 @@ L["tank"] = "Tank"
 L["heal"] = "Heal"
 L["dd"] = "DD"
 L["errorraidcheckbutton"] = "This a raid event, check a role"
+L["okdeleteevent"] = "Are you sure to delete the event \"$1n\"?"
 
 L["addevent"] = "Add event"
 L["delete"] = "Delete"

@@ -44,6 +44,7 @@ L["tank"] = "Tank"
 L["heal"] = "Heal"
 L["dd"] = "DPS"
 L["errorraidcheckbutton"] = "C'est un événement de type raid, cochez une case de rôle"
+L["okdeleteevent"] = "Êtes-vous sûr de vouloir supprimer l'événement \"$1n\" ?"
 
 L["addevent"] = "Créer un événement"
 L["delete"] = "Supprimer"

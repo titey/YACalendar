@@ -1966,7 +1966,7 @@ local function serializeMessage(dataTable)
 	if DEVMODE == true and rover ~= nil then rover:AddWatch("serializeMessage: jsonData", jsonData) end
 	
 	local ret = dataTable.calendarname .. "," .. dataTable.command .. "," .. dataTable.eventuid .. ",JSON:" .. jsonData
-	glog:debug("serializeMessage: return " .. ret)
+	-- glog:debug("serializeMessage: return " .. ret)
 	return ret
 end
 
@@ -2013,7 +2013,7 @@ local function unserializeMessage(serializedDataString)
 					eventuid = eventuidStr,
 					data = data
 				}
-	if DEVMODE == true and rover ~= nil then rover:AddWatch("unserializeMessage: ret", ret) end
+	-- if DEVMODE == true and rover ~= nil then rover:AddWatch("unserializeMessage: ret", ret) end
 	return ret
 end
 
@@ -2298,6 +2298,33 @@ function YACalendar:OnDocLoaded()
 					text = Apollo.GetString("CRB_Yes"),
 					OnClick = function(settings, data, reason)
 						YACalendar:deleteCalendarYesButtonConfigForm(data.target, data.calIdDelete)
+					end,
+				},
+				{
+					color = "Red",
+					text = Apollo.GetString("CRB_No")
+				},
+			},
+			OnShow = function(settings, data)
+				if data.text ~= nil and strlen(data.text) > 0 then
+					settings:SetText(data.text)
+				end
+			end,
+			text = "this is empty, this is a bug",
+			noCloseButton = true,
+			hideOnEscape = true,
+			showWhileDead = true,
+			isExclusive = true,
+		})
+		
+		
+		DLG:Register("OkDeleteEvent", {
+			buttons = {
+				{
+					text = Apollo.GetString("CRB_Yes"),
+					OnClick = function(settings, data, reason)
+						-- if DEVMODE == true and rover ~= nil then rover:AddWatch("OnDocLoaded: data", data) end
+						YACalendar:deleteEventYesButtonPartForm(data.target, data.calendarStr, data.eventUniqueId)
 					end,
 				},
 				{
@@ -4304,10 +4331,86 @@ end
 
 
 
+---
+-- on click on delete button in PartEv window
 function YACalendar:OnClickDeleteButtonPartEvForm(wndHandler, wndControl, eMouseButton)
+
+	DLG:Dismiss("OkDeleteEvent")
+	local event = getEventUniqueIdByCalendarName(self.CONFIG.currentCalendar, self.wndPartEv:GetData())
+	if type(event) ~= "table" then
+		glog:error("OnClickDeleteButtonPartEvForm: cant get event by unique id=" .. self.wndPartEv:GetData())
+		return false
+	end
+	
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickDeleteButtonPartEvForm: event", event) end
+	
+	local data =	{
+						text = String_GetWeaselString(L["okdeleteevent"], event.eventName),
+						calendarStr = self.CONFIG.currentCalendar,
+						eventUniqueId = event.uniqueId,
+						target = self
+					}
+	DLG:Spawn("OkDeleteEvent", data)
 	
 end
 
+
+
+---
+-- click on "yes" in dialog: sure delete event?
+-- @param #object target target (this is "self")
+-- @param #string calendarStr the name of calendar to delete the event
+-- @param #string eventUniqueId the event unique id to delete
+function YACalendar:deleteEventYesButtonPartForm(target, calendarStr, eventUniqueId)
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("deleteEventYesButtonPartForm: target", target) end
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("deleteEventYesButtonPartForm: calendarStr", calendarStr) end
+	if DEVMODE == true and rover ~= nil then rover:AddWatch("deleteEventYesButtonPartForm: eventUniqueId", eventUniqueId) end
+
+	if target == nil or calendarStr == nil or eventUniqueId == nil then
+		glog:error("deleteEventYesButtonPartForm: params are nil, this is a bug -_-'")
+		return false
+	elseif type(calendarStr) ~= "string" or type(eventUniqueId) ~= "string" then
+		glog:error("deleteEventYesButtonPartForm: bad param type")
+		return false
+	end
+	
+	glog:debug("deleteCalendarYesButtonConfigForm: delete event " .. tostring(eventUniqueId))
+	
+	local eventToDelete = getEventUniqueIdByCalendarName(calendarStr, eventUniqueId)
+	if type(eventToDelete) ~= "table" then
+		glog:error("deleteEventYesButtonPartForm: cant get event to delete, this is a bug, report it")
+		return false
+	end
+	
+	-- TODO: put this task in a function
+	eventToDelete.isDeleted = true
+	eventToDelete.updateDate = getDateTimeNow()
+	
+	local updateResult = addReplaceEventByCalendarName(calendarStr, eventToDelete.uniqueId, eventToDelete)
+	if updateResult == false then
+		glog:error("deleteEventYesButtonPartForm: cant delete event")
+		return false
+	end
+	
+	
+	-- TODO: rework this code, put it in a function
+	local cal = getCalendarByName(calendarStr)
+	local channel = generateChannelName(cal.name, cal.salt)
+	local ev = getEventUniqueIdByCalendarName(cal.name, eventToDelete.uniqueId) -- to be sure to have the same event
+	local messageEv = generateUpdateEventTableMessage(channel, cal.name, ev)
+	if type(messageEv) == "table" then
+		glog:debug("deleteEventYesButtonPartForm: add an updateEvent message in sendSyncData (uniqueId=" .. ev.uniqueId .. ")")
+		tinsert(sendSyncData, messageEv)
+	else
+		glog:error("deleteEventYesButtonPartForm: cant generate updateEvent message, this is a bug, report it")
+		return false
+	end
+
+	
+	target.wndPartEv:Show(false)
+	target:refreshAllEventsDay()
+	
+end
 
 
 ---------------------------------------------------------------------------------------------------
@@ -5305,7 +5408,7 @@ end
 
 ---
 -- click on "yes" in dialog: sure delete calendar?
--- @param #object target target
+-- @param #object target target (this is "self")
 -- @param #number calid integer of calendar id
 function YACalendar:deleteCalendarYesButtonConfigForm(target, calid)
 	glog:debug("in deleteCalendarYesButtonConfigForm()")
