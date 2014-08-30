@@ -2618,7 +2618,7 @@ end
 ---
 -- create a delayed getUpdate message on all channels
 function YACalendar:createDelayedGetUpdateTimer()
-	glog:debug("in getUpdateAllCalendar")
+	glog:debug("in createDelayedGetUpdateTimer")
 	self.getUpdateDelayTimer = ApolloTimer.Create(3.0, false, "getUpdateAllCalendar", self)
 end
 
@@ -2628,15 +2628,15 @@ end
 -- send a getUpdate on all channels
 function YACalendar:getUpdateAllCalendar()
 	glog:debug("in getUpdateAllCalendar")
-
+	
 	for calKey, calValue in ipairs(calendarData) do
-		local d =	{
-						channel			= generateChannelName(calValue.name, calValue.salt),
-						calendarname 	= calValue.name,
-						command			= "getUpdate",
-						eventuid		= "osef",
-						data			= {}
-					}
+		local d = {
+			channel			= generateChannelName(calValue.name, calValue.salt),
+			calendarname	= calValue.name,
+			command			= "getUpdate",
+			eventuid		= "osef",
+			data			= {}
+		}
 		tinsert(sendSyncData, d)
 	end
 end
@@ -3646,7 +3646,6 @@ end
 -- @param #object wndHandler handler
 -- @param #object wndControl control
 function YACalendar:OnShowMainForm(wndHandler, wndControl)
-	glog:debug("in OnShowMainForm: wndHandler=" .. wndHandler:GetName() .. " wndControl=" .. wndControl:GetName())
 	if wndControl:GetName() == "YACalendarMainForm" then
 		self:loadCurrentCalendarWindow()
 	end
@@ -5394,6 +5393,8 @@ function YACalendar:OnClickCloseButtonConfigForm(wndHandler, wndControl, eMouseB
 	glog:debug("in OnClickCloseButtonConfigForm()")
 	self:loadCurrentCalendarWindow()
 	self.wndConfig:Close()
+	
+	self:getUpdateAllCalendar()
 end
 
 
