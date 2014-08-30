@@ -3293,24 +3293,27 @@ function YACalendar:loadCurrentCalendarWindow()
 		end
 		
 		local eventsDay = getAllEventsDateByCalendarName(self.CONFIG.currentCalendar, incrementDay.year, incrementDay.month, incrementDay.day)
-		
+		-- if DEVMODE == true and rover ~= nil then rover:AddWatch("loadCurrentCalendarWindow: eventsDay " .. tostring(incrementDay.year) .. "-" .. tostring(incrementDay.month) .. "-" .. tostring(incrementDay.day), eventsDay) end
 		if eventsDay ~= nil and type(eventsDay) == "table" and #eventsDay > 0 then
 		
 			-- is there any visible events ? (isDeleted == false)
 			local visibleEvents = 0
 			for j=1,#eventsDay do
+				-- glog:debug("loadCurrentCalendarWindow: j=" .. j)
 				if eventsDay[j].isDeleted == false then
 					visibleEvents = visibleEvents + 1
 				end
 			end
 			
 			if visibleEvents > 0 then
-				--glog:debug("loadCurrentCalendarWindow: FOUND EVENT ! " .. ev.eventName .. " " .. ev.eventDateTime .. " " .. ev.uniqueId)
+				-- glog:debug("loadCurrentCalendarWindow: FOUND EVENT !")
 				daybox:ChangeArt("BK3:UI_BK3_Holo_Snippet")
 				daybox:SetBGColor(eventBGColor)
 				daybox:SetNormalTextColor(eventTextColor)
 				daybox:SetDisabledTextColor(eventTextColor)
 			end
+		else
+			-- glog:debug("loadCurrentCalendarWindow: eventsDay is empty")
 		end
 		
 		incrementDay = addDaysDate(incrementDay.year, incrementDay.month, incrementDay.day)
@@ -4524,7 +4527,6 @@ function YACalendar:OnShowAddEvForm(wndHandler, wndControl)
 		return false
 	end
 	
-	
 	local useDate = osdate('*t')
 	if type(self.currentDaySelected) == "table" then
 		glog:debug("OnShowAddEvForm: use currentDaySelected")
@@ -4552,7 +4554,6 @@ function YACalendar:OnShowAddEvForm(wndHandler, wndControl)
 	evDateHour:SetText(strformat("%02d", useDate.hour))
 	evDateMinute:SetText(strformat("%02d", useDate.minute))
 	
-	
 	-- init old content of all EditBox
 	self.oldEditBoxContentAddEvForm =	{
 											name = evName:GetText(),
@@ -4565,22 +4566,23 @@ function YACalendar:OnShowAddEvForm(wndHandler, wndControl)
 											durationMinute = evDurationMinute:GetText()
 										}
 	
-	evComment:SetText("")
-	
-	
+	-- update the boxes
 	self:refreshWeekdayAddEvForm()
-	
+	evComment:SetText("")
 	evName:SetFocus()
 
+	-- force the right size
+	local leftOld, topOld, rightOld, bottomOld = wndControl:GetAnchorOffsets()
+	wndControl:SetAnchorOffsets(leftOld, topOld, rightOld, topOld+580)
+	
 	-- hide raid frame by default
-	local evEventRaidButton = self.wndAddEv:FindChild("EventRaidButton")
-	local raidWindow = self.wndAddEv:FindChild("RaidWindow")
+	local evEventRaidButton = wndControl:FindChild("EventRaidButton")
+	local raidWindow = wndControl:FindChild("RaidWindow")
 	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnShowAddEvForm: evEventRaidButton", evEventRaidButton) end
-	local leftOld, topOld, rightOld, bottomOld = self.wndAddEv:GetAnchorOffsets()
-	self.wndAddEv:SetAnchorOffsets(leftOld, topOld, rightOld, bottomOld-60)
+	local leftOld, topOld, rightOld, bottomOld = wndControl:GetAnchorOffsets()
+	wndControl:SetAnchorOffsets(leftOld, topOld, rightOld, bottomOld-60)
 	raidWindow:Show(false)
 	evEventRaidButton:SetCheck(false)
-	
 end
 
 
