@@ -22,6 +22,8 @@ L["october"] = true
 L["november"] = true
 L["december"] = true
 
+L["nocalendar"] = "There is no calendar created, click on \"configuration\" button and add a new one."
+
 L["completeDate"] = "$7n, $8n $3n, $1n"
 L["tinyDateTime"] = "$2n/$3n $4n:$5n"
 L["eventDateTime"] = "$7n, $8n $3n, $1n $4n:$5n"

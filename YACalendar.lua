@@ -3246,9 +3246,28 @@ function YACalendar:loadCurrentCalendarWindow()
 	if DEVMODE == true and rover ~= nil then rover:AddWatch("loadCurrentCalendarWindow: calendarData", calendarData) end
 	
 	
-	
-	-- connect to all cal chan
+	-- connect to all calendar channel
 	self:connectToChannels()
+	
+	
+	-- hide all DayCal button and show "nocalendar" window
+	self.wndMain:FindChild("CalendarName"):SetText("")
+	self.wndMain:FindChild("NoCalendarFrame"):Show(true)
+	for i=1,35 do
+		local daybox = self.wndMain:FindChild("DayCal" .. i)
+		if daybox == nil then
+			glog:error("loadCurrentCalendarWindow: cant find cell")
+			return false
+		end
+		daybox:Show(false)
+	end
+	self.wndMain:FindChild("TextBoxMonday"):Show(false)
+	self.wndMain:FindChild("TextBoxTuesday"):Show(false)
+	self.wndMain:FindChild("TextBoxWednesday"):Show(false)
+	self.wndMain:FindChild("TextBoxThursday"):Show(false)
+	self.wndMain:FindChild("TextBoxFriday"):Show(false)
+	self.wndMain:FindChild("TextBoxSaturday"):Show(false)
+	self.wndMain:FindChild("TextBoxSunday"):Show(false)
 	
 	
 	-- test if current calendar is ok
@@ -3269,6 +3288,21 @@ function YACalendar:loadCurrentCalendarWindow()
 	self.wndMain:FindChild("CalendarName"):SetText(self.CONFIG.currentCalendar)
 	
 	
+	-- show DayCal button and hide "nocalendar" window
+	for i=1,35 do
+		local daybox = self.wndMain:FindChild("DayCal" .. i)
+		daybox:Show(true)
+	end
+	self.wndMain:FindChild("NoCalendarFrame"):Show(false)
+	self.wndMain:FindChild("TextBoxMonday"):Show(true)
+	self.wndMain:FindChild("TextBoxTuesday"):Show(true)
+	self.wndMain:FindChild("TextBoxWednesday"):Show(true)
+	self.wndMain:FindChild("TextBoxThursday"):Show(true)
+	self.wndMain:FindChild("TextBoxFriday"):Show(true)
+	self.wndMain:FindChild("TextBoxSaturday"):Show(true)
+	self.wndMain:FindChild("TextBoxSunday"):Show(true)
+	
+	
 	-- reset daycal cells
 	local ret = self:resetDayCalCells()
 	if ret == false then
@@ -3287,10 +3321,6 @@ function YACalendar:loadCurrentCalendarWindow()
 	-- loop for all daycal cells
 	for i=1,35 do
 		local daybox = self.wndMain:FindChild("DayCal" .. i)
-		if daybox == nil then
-			glog:error("loadCurrentCalendarWindow: cant find cell")
-			return false
-		end
 		
 		local eventsDay = getAllEventsDateByCalendarName(self.CONFIG.currentCalendar, incrementDay.year, incrementDay.month, incrementDay.day)
 		-- if DEVMODE == true and rover ~= nil then rover:AddWatch("loadCurrentCalendarWindow: eventsDay " .. tostring(incrementDay.year) .. "-" .. tostring(incrementDay.month) .. "-" .. tostring(incrementDay.day), eventsDay) end
