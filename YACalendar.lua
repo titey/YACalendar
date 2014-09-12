@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------------------------
 -- Client Lua Script for YACalendar
--- a shared calendar addon
+-- a shared calendar addon 
 -- License: GPLv3
 -- Author:  TiTeY`
 -- Copyright (c) TiTeY`
@@ -1254,7 +1254,6 @@ local function addCalendarEvent(calId, evName, evDT, evDur, evCreator, evUpdateD
 	glog:debug("in addCalendarEvent(" .. tostring(calId) .. "," .. evName .. "," .. evDT .. "," .. evDur .. "," .. evCreator .. "," .. tostring(evUpdateDT) .. "," .. tostring(evIsDeleted) .. "," .. tostring(evForceUniqueId) .. ")")
 	
 	
-	
 	-- evUpdateDT is optional
 	if evUpdateDT == nil then
 		evUpdateDT = getDateTimeNow() -- if not in param, set it to now()
@@ -1351,9 +1350,6 @@ local function addCalendarEventByCalendarName(calstr, evName, evDT, evDur, evCre
 	end
 
 end
-
-
-
 
 
 
@@ -1691,7 +1687,7 @@ local function getParticipantByCalendarName(calstr, uniqueid, playername)
 		glog:error("getParticipantByCalendarName: bad params type")
 		return false
 	end
-		
+	
 	local calid = getCalendarIdByName(calstr)
 	if type(calid) == "number" then
 		return getParticipant(calid, uniqueid, playername)
@@ -2055,7 +2051,6 @@ local function generateUpdateEventTableMessage(channel, calendarname, event)
 	event.uniqueId = nil -- osef
 	
 	return {channel = channel, calendarname = calendarname, command = "updateEvent", eventuid = eventuid, data = event}
-	
 end
 
 
@@ -2079,6 +2074,7 @@ local function generateUpdateParticipantTableMessage(channel, calendarname, even
 	end
 	return {channel = channel, calendarname = calendarname, command = "updateParticipant", eventuid = eventUniqueId, data = deepcopy(participant)}
 end
+
 
 
 -----------------------------------------------------------------------------------------------
@@ -2158,7 +2154,6 @@ function YACalendar:OnLoad()
     -- load form file
 	self.xmlDoc = XmlDoc.CreateFromFile("YACalendar.xml")
 	self.xmlDoc:RegisterCallback("OnDocLoaded", self)
-	
 	
 end
 
@@ -2517,7 +2512,6 @@ function YACalendar:OnTimer()
 		glog:debug("OnTimer: calendar modified, reload main window")
 		self:loadCurrentCalendarWindow()
 	end
-	
 end
 
 
@@ -2661,7 +2655,6 @@ function YACalendar:OnClickACT2Button(wndHandler, wndControl, eMouseButton)
 	
 	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickACT2Button: sendSyncData", sendSyncData) end
 	if DEVMODE == true and rover ~= nil then rover:AddWatch("OnClickACT2Button: receivedSyncData", receivedSyncData) end
-	
 end
 
 
@@ -3093,7 +3086,7 @@ end
 function YACalendar:connectToChannels()
 	glog:debug("in connectToChannels")
 	
-
+	
 	-- loop on all calendar and connect to all channel
 	local goodChannels = {}
 	for calId,calValue in pairs(calendarData) do
@@ -3406,7 +3399,6 @@ function YACalendar:resetDayCalCells()
 		
 		incrementDay = addDaysDate(incrementDay.year, incrementDay.month, incrementDay.day)
 	end
-	
 end
 
 
@@ -3494,7 +3486,6 @@ function YACalendar:OnSave(eType)
 		self.CONFIG.DEVMODE = false
 	end
 	
-	
 	return deepcopy(self.CONFIG)
 end
 
@@ -3518,7 +3509,6 @@ function YACalendar:OnRestore(eType, t)
 		-- glog:debug("set t in tRestoreData")
 		self.tRestoreData = deepcopy(t)
 	end
-
 end
 
 
